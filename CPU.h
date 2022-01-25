@@ -135,6 +135,8 @@ public:
 	void PCToStack();
 	void FlagsToStack();
 
+	word CombineAddrBytes(byte high, byte low);
+
 	// Opcodes
 	void ADC(byte value);
 	void AND(byte value);

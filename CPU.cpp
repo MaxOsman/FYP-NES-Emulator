@@ -24,8 +24,10 @@ void CPU::NMI()
 	statusFlags[FLAG_BREAK] = false;
 	FlagsToStack();
 
-	// Hard coded location of NMI
-	programCounter = 0xfffa;
+	// Hard coded pointer to NMI at 0xfffa
+	byte lowByte = RAM[0xfffa];
+	byte highByte = RAM[0xfffb];
+	programCounter = CombineAddrBytes(highByte, lowByte);
 }
 
 void CPU::RESET()
@@ -33,9 +35,12 @@ void CPU::RESET()
 	A = 0x0;
 	X = 0x0;
 	Y = 0x0;
-	// Temporary, in order to make the update loop start at 0x0
-	programCounter = 0xfffc;
 	stackPointer = 0xfd;
+
+	// Hard coded pointer to RESET at 0xfffc
+	byte lowByte = RAM[0xfffc];
+	byte highByte = RAM[0xfffd];
+	programCounter = CombineAddrBytes(highByte, lowByte);
 
 	statusFlags[FLAG_CARRY] = false;
 	statusFlags[FLAG_ZERO] = false;
@@ -57,8 +62,10 @@ void CPU::IRQ()
 		statusFlags[FLAG_BREAK] = false;
 		FlagsToStack();
 
-		// Hard coded location of IRQ
-		programCounter = 0xfffe;
+		// Hard coded pointer to IRQ at 0xfffe
+		byte lowByte = RAM[0xfffe];
+		byte highByte = RAM[0xffff];
+		programCounter = CombineAddrBytes(highByte, lowByte);
 	}
 }
 
@@ -208,12 +215,10 @@ word CPU::AddrAbsolute()
 	++programCounter;
 	byte addrHigh = RAM[programCounter];
 
-	// Combine for actual address
-	word addr = (word)addrHigh * 0x100 + (word)addrLow;
-
 	++programCounter;
 
-	return addr;
+	// Combine for actual address
+	return CombineAddrBytes(addrHigh, addrLow);
 }
 
 word CPU::AddrAbsoluteX()
@@ -225,12 +230,10 @@ word CPU::AddrAbsoluteX()
 	++programCounter;
 	byte addrHigh = RAM[programCounter];
 
-	// Combine for actual address
-	word addr = (word)addrHigh * 0x100 + (word)addrLow + (word)X;
-
 	++programCounter;
 
-	return addr;
+	// Combine for actual address
+	return CombineAddrBytes(addrHigh, addrLow) + X;
 }
 
 word CPU::AddrAbsoluteY()
@@ -242,12 +245,10 @@ word CPU::AddrAbsoluteY()
 	++programCounter;
 	byte addrHigh = RAM[programCounter];
 
-	// Combine for actual address
-	word addr = (word)addrHigh * 0x100 + (word)addrLow + (word)Y;
-
 	++programCounter;
 
-	return addr;
+	// Combine for actual address
+	return CombineAddrBytes(addrHigh, addrLow) + Y;
 }
 
 word CPU::AddrIndirect()
@@ -260,7 +261,7 @@ word CPU::AddrIndirect()
 	word addrPointerHigh = RAM[programCounter];
 
 	// Combine for pointer
-	word addrPointer = addrPointerHigh * 0x100 + addrPointerLow;
+	word addrPointer = CombineAddrBytes(addrPointerHigh, addrPointerLow);
 
 	++programCounter;
 
@@ -277,9 +278,8 @@ word CPU::AddrIndirect()
 	{
 		addrHigh = RAM[addrPointer + 1];
 	}
-	word addr = addrHigh * 0x100 + addrLow;
 
-	return addr;
+	return CombineAddrBytes(addrHigh, addrLow);
 }
 
 word CPU::AddrIndirectX()
@@ -292,9 +292,8 @@ word CPU::AddrIndirectX()
 	// Get address to read from
 	word addrLow = RAM[addrPointer];
 	word addrHigh = RAM[addrPointer + 1];
-	word addr = addrHigh * 0x100 + addrLow;
 
-	return addr;
+	return CombineAddrBytes(addrHigh, addrLow);
 }
 
 word CPU::AddrIndirectY()
@@ -306,9 +305,8 @@ word CPU::AddrIndirectY()
 
 	word addrLow = RAM[addrPointer];
 	word addrHigh = RAM[addrPointer + 1];
-	word addr = addrHigh * 0x100 + addrLow;
 
-	return (addr + Y);
+	return CombineAddrBytes(addrHigh, addrLow) + Y;
 }
 
 void CPU::Branch(byte value)
@@ -354,6 +352,11 @@ void CPU::FlagsToStack()
 
 	RAM[0x100 + stackPointer] = status;
 	--stackPointer;
+}
+
+word CPU::CombineAddrBytes(byte high, byte low)
+{
+	return ( (word)high * 0x100 + (word)low );
 }
 
 // Overflow logic from stackoverflow.com/questions/16845912/determining-carry-and-overflow-flag-in-6502-emulation-in-java
@@ -458,7 +461,18 @@ void CPU::BPL(byte value)
 
 void CPU::BRK(byte value)
 {
+	++programCounter;
+	PCToStack();
 
+	statusFlags[FLAG_INTERRUPT_DISABLE] = true;
+	FlagsToStack();
+
+	statusFlags[FLAG_BREAK] = true;
+
+	// Hard coded pointer to IRQ at 0xfffe
+	byte lowByte = RAM[0xfffe];
+	byte highByte = RAM[0xffff];
+	programCounter = CombineAddrBytes(highByte, lowByte);
 }
 
 void CPU::BVC(byte value)
