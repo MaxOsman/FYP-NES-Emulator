@@ -2,13 +2,23 @@
 
 CPU::CPU()
 {
-	RESET();
-
 	for (unsigned int i = 0; i < 0x10000; ++i)
 	{
 		// To do - initialise to random numbers
 		RAM[i] = 0xff;
 	}
+
+	// Vectors
+	RAM[0xfffa] = 0x00;
+	RAM[0xfffb] = 0x00;
+
+	RAM[0xfffc] = 0x00;
+	RAM[0xfffd] = 0x80;
+
+	RAM[0xfffe] = 0x00;
+	RAM[0xffff] = 0x00;
+
+	RESET();
 }
 
 CPU::~CPU()
@@ -126,16 +136,15 @@ bool CPU::Update()
 	case ADDR_INY:
 		addr = AddrIndirectY();
 		break;
-	case ADDR_XXX:
+	case ADDR_NON:
 		// Should only happen for unofficial opcodes
-		assert(OpcodeAddrTypes[opcode] != ADDR_XXX);
+		assert(OpcodeAddrTypes[opcode] != ADDR_NON);
 		break;
 	}
 
 	if (OpcodeAddrTypes[opcode] != ADDR_IMP && OpcodeAddrTypes[opcode] != ADDR_ACC)
 	{
 		value = RAM[addr];
-		++programCounter;
 	}
 
 	// Perform opcode using the retrieved byte
@@ -153,8 +162,8 @@ bool CPU::Update()
 	case OP_NOP:
 		NOP();
 		break;
-	case OP_XXX:
-		assert(OpcodeTypes[opcode] != OP_XXX);
+	case OP_NON:
+		assert(OpcodeTypes[opcode] != OP_NON);
 		break;
 	}
 
@@ -164,6 +173,7 @@ bool CPU::Update()
 byte CPU::AddrImmediate()
 {
 	// Get byte after the opcode
+	++programCounter;
 	return programCounter;
 }
 
@@ -203,6 +213,7 @@ byte CPU::AddrZeroY()
 byte CPU::AddrRelative()
 {
 	// Get byte after the opcode
+	++programCounter;
 	return programCounter;
 }
 
