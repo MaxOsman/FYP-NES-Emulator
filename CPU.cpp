@@ -1,5 +1,6 @@
 #include "CPU.h"
 
+
 CPU::CPU()
 {
 	for (unsigned int i = 0; i < 0x10000; ++i)
@@ -47,11 +48,6 @@ void CPU::RESET()
 	Y = 0x0;
 	stackPointer = 0xfd;
 
-	// Hard coded pointer to RESET at 0xfffc
-	byte lowByte = RAM[0xfffc];
-	byte highByte = RAM[0xfffd];
-	programCounter = CombineAddrBytes(highByte, lowByte);
-
 	statusFlags[FLAG_CARRY] = false;
 	statusFlags[FLAG_ZERO] = false;
 	statusFlags[FLAG_INTERRUPT_DISABLE] = true;
@@ -60,6 +56,11 @@ void CPU::RESET()
 	statusFlags[FLAG_UNUSED] = true;
 	statusFlags[FLAG_OVERFLOW] = false;
 	statusFlags[FLAG_NEGATIVE] = false;
+
+	// Hard coded pointer to RESET at 0xfffc
+	byte lowByte = RAM[0xfffc];
+	byte highByte = RAM[0xfffd];
+	programCounter = CombineAddrBytes(highByte, lowByte);
 }
 
 void CPU::IRQ()
@@ -84,7 +85,7 @@ bool CPU::Update()
 	// Get the next opcode
 	byte opcode = RAM[programCounter];
 
-	// Temp
+	// Temp - end program
 	if (opcode == 0xff)
 	{
 		return true;
@@ -104,7 +105,7 @@ bool CPU::Update()
 		value = A;
 		break;
 	case ADDR_IMM:
-		addr = AddrImmediate();
+		value = AddrImmediate();
 		break;
 	case ADDR_ZER:
 		addr = AddrZero();
@@ -116,7 +117,7 @@ bool CPU::Update()
 		addr = AddrZeroY();
 		break;
 	case ADDR_REL:
-		addr = AddrRelative();
+		value = AddrRelative();
 		break;
 	case ADDR_ABS:
 		addr = AddrAbsolute();
@@ -142,7 +143,7 @@ bool CPU::Update()
 		break;
 	}
 
-	if (OpcodeAddrTypes[opcode] != ADDR_IMP && OpcodeAddrTypes[opcode] != ADDR_ACC)
+	if (OpcodeAddrTypes[opcode] != ADDR_IMP && OpcodeAddrTypes[opcode] != ADDR_ACC && OpcodeAddrTypes[opcode] != ADDR_IMM && OpcodeAddrTypes[opcode] != ADDR_REL)
 	{
 		value = RAM[addr];
 	}
@@ -159,8 +160,164 @@ bool CPU::Update()
 	case OP_ASL:
 		ASL(value, opcode, addr);
 		break;
+	case OP_BCC:
+		BCC(value);
+		break;
+	case OP_BCS:
+		BCS(value);
+		break;
+	case OP_BEQ:
+		BEQ(value);
+		break;
+	case OP_BIT:
+		BIT(value);
+		break;
+	case OP_BMI:
+		BMI(value);
+		break;
+	case OP_BNE:
+		BNE(value);
+		break;
+	case OP_BPL:
+		BPL(value);
+		break;
+	case OP_BRK:
+		BRK();
+		break;
+	case OP_BVC:
+		BVC(value);
+		break;
+	case OP_BVS:
+		BVS(value);
+		break;
+	case OP_CLC:
+		CLC();
+		break;
+	case OP_CLD:
+		CLD();
+		break;
+	case OP_CLI:
+		CLI();
+		break;
+	case OP_CLV:
+		CLV();
+		break;
+	case OP_CMP:
+		CMP(value);
+		break;
+	case OP_CPX:
+		CPX(value);
+		break;
+	case OP_CPY:
+		CPY(value);
+		break;
+	case OP_DEC:
+		DEC(addr);
+		break;
+	case OP_DEX:
+		DEX();
+		break;
+	case OP_DEY:
+		DEY();
+		break;
+	case OP_EOR:
+		EOR(value);
+		break;
+	case OP_INC:
+		INC(addr);
+		break;
+	case OP_INX:
+		INX();
+		break;
+	case OP_INY:
+		INY();
+		break;
+	case OP_JMP:
+		JMP(addr);
+		break;
+	case OP_JSR:
+		JSR(addr);
+		break;
+	case OP_LDA:
+		LDA(value);
+		break;
+	case OP_LDX:
+		LDX(value);
+		break;
+	case OP_LDY:
+		LDY(value);
+		break;
+	case OP_LSR:
+		LSR(value, opcode, addr);
+		break;
 	case OP_NOP:
 		NOP();
+		break;
+	case OP_ORA:
+		ORA(value);
+		break;
+	case OP_PHA:
+		PHA();
+		break;
+	case OP_PHP:
+		PHP();
+		break;
+	case OP_PLA:
+		PLA();
+		break;
+	case OP_PLP:
+		PLP();
+		break;
+	case OP_ROL:
+		ROL(value, opcode, addr);
+		break;
+	case OP_ROR:
+		ROR(value, opcode, addr);
+		break;
+	case OP_RTI:
+		RTI();
+		break;
+	case OP_RTS:
+		RTS();
+		break;
+	case OP_SBC:
+		SBC(value);
+		break;
+	case OP_SEC:
+		SEC();
+		break;
+	case OP_SED:
+		SED();
+		break;
+	case OP_SEI:
+		SEI();
+		break;
+	case OP_STA:
+		STA(addr);
+		break;
+	case OP_STX:
+		STX(addr);
+		break;
+	case OP_STY:
+		STY(addr);
+		break;
+	case OP_TAX:
+		TAX();
+		break;
+	case OP_TAY:
+		TAY();
+		break;
+	case OP_TSX:
+		TSX();
+		break;
+	case OP_TXA:
+		TXA();
+		break;
+	case OP_TXS:
+		TXS();
+		break;
+	case OP_TYA:
+		TYA();
 		break;
 	case OP_NON:
 		assert(OpcodeTypes[opcode] != OP_NON);
@@ -173,8 +330,10 @@ bool CPU::Update()
 byte CPU::AddrImmediate()
 {
 	// Get byte after the opcode
+	byte value = RAM[programCounter];
 	++programCounter;
-	return programCounter;
+
+	return value;
 }
 
 byte CPU::AddrZero()
@@ -213,8 +372,10 @@ byte CPU::AddrZeroY()
 byte CPU::AddrRelative()
 {
 	// Get byte after the opcode
+	byte relAddr = RAM[programCounter];
 	++programCounter;
-	return programCounter;
+
+	return relAddr;
 }
 
 word CPU::AddrAbsolute()
@@ -470,15 +631,15 @@ void CPU::BPL(byte value)
 	}
 }
 
-void CPU::BRK(byte value)
+void CPU::BRK()
 {
+	// Skip padding byte
 	++programCounter;
 	PCToStack();
 
 	statusFlags[FLAG_INTERRUPT_DISABLE] = true;
-	FlagsToStack();
-
 	statusFlags[FLAG_BREAK] = true;
+	FlagsToStack();
 
 	// Hard coded pointer to IRQ at 0xfffe
 	byte lowByte = RAM[0xfffe];
