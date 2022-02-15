@@ -1,1 +1,2 @@
 E:\VS\source\repos\FYP_6502\Debug\FYP_6502.exe
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug\FYP_6502.exe

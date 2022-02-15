@@ -1,2 +1,15 @@
-﻿  main.cpp
-  FYP_6502.vcxproj -> E:\VS\source\repos\FYP_6502\Debug\FYP_6502.exe
+﻿  CPU.cpp
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(445,55): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(445,38): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(463,36): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(463,26): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(477,36): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(477,26): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(489,46): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(489,36): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(866,8): warning C4552: '/': result of expression not used
+  NES.cpp
+  main.cpp
+  Generating Code...
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(51): warning C4715: 'NES::Read': not all control paths return a value
+  FYP_6502.vcxproj -> E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug\FYP_6502.exe

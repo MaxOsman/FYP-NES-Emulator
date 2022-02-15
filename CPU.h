@@ -6,6 +6,8 @@
 #define RESET_VECTOR 0xfffc
 #define IRQ_VECTOR 0xfffe
 
+class NES;
+
 
 class CPU
 {
@@ -92,19 +94,61 @@ public:
 		OP_CPY, OP_CMP, OP_NON, OP_NON, OP_CPY, OP_CMP, OP_DEC, OP_NON, OP_INY, OP_CMP, OP_DEX, OP_NON, OP_CPY, OP_CMP, OP_DEC, OP_NON,
 		OP_BNE, OP_CMP, OP_NON, OP_NON, OP_NON, OP_CMP, OP_DEC, OP_NON, OP_CLD, OP_CMP, OP_NON, OP_NON, OP_NON, OP_CMP, OP_DEC, OP_NON,
 		OP_CPX, OP_SBC, OP_NON, OP_NON, OP_CPX, OP_SBC, OP_INC, OP_NON, OP_INX, OP_SBC, OP_NOP, OP_NON, OP_CPX, OP_SBC, OP_INC, OP_NON,
-		OP_BEQ, OP_SBC, OP_NON, OP_NON, OP_NON, OP_SBC, OP_INC, OP_NON, OP_SED, OP_SBC, OP_NON, OP_NON, OP_NON, OP_SBC, OP_INC, OP_NON,
+		OP_BEQ, OP_SBC, OP_NON, OP_NON, OP_NON, OP_SBC, OP_INC, OP_NON, OP_SED, OP_SBC, OP_NON, OP_NON, OP_NON, OP_SBC, OP_INC, OP_NON
 	};
 
+	const byte OpcodeTimings[0x100] =
+	{
+		7, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0,
+		2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+		6, 6, 0, 0, 3, 3, 5, 0, 4, 2, 2, 0, 4, 4, 6, 0,
+		2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+		6, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 3, 4, 6, 0,
+		2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+		6, 6, 0, 0, 0, 3, 5, 0, 4, 2, 2, 0, 5, 4, 6, 0,
+		2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+		0, 6, 0, 0, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0,
+		2, 6, 0, 0, 4, 4, 4, 0, 2, 5, 2, 0, 0, 5, 0, 0,
+		2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0,
+		2, 5, 0, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0,
+		2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,
+		2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+		2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,
+		2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0
+	};
+
+	/*const bool CanHaveExtraCycle[0x100] =
+	{
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, true, false, false, false, false, false, false, false, true, false, false, false, true, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, true, false, false, false, false, false, false, false, true, false, false, false, true, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, true, false, false, false, false, false, false, false, true, false, false, false, true, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, true, false, false, false, false, false, false, false, true, false, false, false, true, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false
+	};*/
+
 	// Registers
-	byte A, X, Y;
-	word programCounter;
-	byte stackPointer;
-	bool statusFlags[8] = { false, false, true, false, false, true, false, false };
+	byte m_A, m_X, m_Y;
+	word m_programCounter;
+	byte m_stackPointer;
+	bool m_statusFlags[8] = { false, false, true, false, false, true, false, false };
 
-	// Temp until bus
-	byte* RAM = new byte[0x10000];
+	NES* m_pNES;
 
-	CPU();
+	byte m_cycle;
+	bool m_hasCrossedBoundary;
+
+	CPU(NES* parentNES);
 	~CPU();
 
 	// Interrupts
@@ -137,7 +181,7 @@ public:
 	word CombineAddrBytes(byte high, byte low);
 
 	// Opcodes
-	void ADC(byte value);
+	void ADC(byte value, byte opcode);
 	void AND(byte value);
 	void ASL(byte value, byte opcode, word addr);
 	void BCC(byte value);

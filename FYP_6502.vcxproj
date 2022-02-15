@@ -141,12 +141,15 @@
   <ItemGroup>
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="ROMLoading.cpp" />
+    <ClCompile Include="NES.cpp" />
+    <ClCompile Include="ROM.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CPU.h" />
     <ClInclude Include="Debug.h" />
-    <ClInclude Include="ROMLoading.h" />
+    <ClInclude Include="NES.h" />
+    <ClInclude Include="RAM.h" />
+    <ClInclude Include="ROM.h" />
     <ClInclude Include="Types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

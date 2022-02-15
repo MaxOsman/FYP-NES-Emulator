@@ -1,328 +1,329 @@
 #include "CPU.h"
+#include "NES.h"
 
 
-CPU::CPU()
+CPU::CPU(NES* parentNES)
 {
-	for (unsigned int i = 0; i < 0x10000; ++i)
-	{
-		// To do - initialise to random numbers
-		RAM[i] = 0xff;
-	}
-
-	// Vectors
-	RAM[0xfffa] = 0x00;
-	RAM[0xfffb] = 0x00;
-
-	RAM[0xfffc] = 0x00;
-	RAM[0xfffd] = 0x80;
-
-	RAM[0xfffe] = 0x00;
-	RAM[0xffff] = 0x00;
+	m_pNES = parentNES;
 
 	RESET();
 }
 
 CPU::~CPU()
 {
-	delete[] RAM;
+	m_pNES = nullptr;
 }
 
 void CPU::NMI()
 {
 	PCToStack();
 
-	statusFlags[FLAG_INTERRUPT_DISABLE] = true;
-	statusFlags[FLAG_BREAK] = false;
+	m_statusFlags[FLAG_INTERRUPT_DISABLE] = true;
+	m_statusFlags[FLAG_BREAK] = false;
 	FlagsToStack();
 
+	m_cycle = 8;
+
 	// Hard coded pointer to NMI at 0xfffa
-	byte lowByte = RAM[0xfffa];
-	byte highByte = RAM[0xfffb];
-	programCounter = CombineAddrBytes(highByte, lowByte);
+	byte lowByte = m_pNES->Read(0xfffa);
+	byte highByte = m_pNES->Read(0xfffb);
+	m_programCounter = CombineAddrBytes(highByte, lowByte);
 }
 
 void CPU::RESET()
 {
-	A = 0x0;
-	X = 0x0;
-	Y = 0x0;
-	stackPointer = 0xfd;
+	m_A = 0x0;
+	m_X = 0x0;
+	m_Y = 0x0;
+	m_stackPointer = 0xfd;
 
-	statusFlags[FLAG_CARRY] = false;
-	statusFlags[FLAG_ZERO] = false;
-	statusFlags[FLAG_INTERRUPT_DISABLE] = true;
-	statusFlags[FLAG_DECIMAL] = false;
-	statusFlags[FLAG_BREAK] = false;
-	statusFlags[FLAG_UNUSED] = true;
-	statusFlags[FLAG_OVERFLOW] = false;
-	statusFlags[FLAG_NEGATIVE] = false;
+	m_statusFlags[FLAG_CARRY] = false;
+	m_statusFlags[FLAG_ZERO] = false;
+	m_statusFlags[FLAG_INTERRUPT_DISABLE] = true;
+	m_statusFlags[FLAG_DECIMAL] = false;
+	m_statusFlags[FLAG_BREAK] = false;
+	m_statusFlags[FLAG_UNUSED] = true;
+	m_statusFlags[FLAG_OVERFLOW] = false;
+	m_statusFlags[FLAG_NEGATIVE] = false;
+
+	m_cycle = 8;
 
 	// Hard coded pointer to RESET at 0xfffc
-	byte lowByte = RAM[0xfffc];
-	byte highByte = RAM[0xfffd];
-	programCounter = CombineAddrBytes(highByte, lowByte);
+	byte lowByte = m_pNES->Read(0xfffc);
+	byte highByte = m_pNES->Read(0xfffd);
+	m_programCounter = CombineAddrBytes(highByte, lowByte);
 }
 
 void CPU::IRQ()
 {
-	if (!statusFlags[FLAG_INTERRUPT_DISABLE])
+	if (!m_statusFlags[FLAG_INTERRUPT_DISABLE])
 	{
 		PCToStack();
 
-		statusFlags[FLAG_INTERRUPT_DISABLE] = true;
-		statusFlags[FLAG_BREAK] = false;
+		m_statusFlags[FLAG_INTERRUPT_DISABLE] = true;
+		m_statusFlags[FLAG_BREAK] = false;
 		FlagsToStack();
 
+		m_cycle = 7;
+
 		// Hard coded pointer to IRQ at 0xfffe
-		byte lowByte = RAM[0xfffe];
-		byte highByte = RAM[0xffff];
-		programCounter = CombineAddrBytes(highByte, lowByte);
+		byte lowByte = m_pNES->Read(0xfffe);
+		byte highByte = m_pNES->Read(0xffff);
+		m_programCounter = CombineAddrBytes(highByte, lowByte);
 	}
 }
 
 bool CPU::Update()
 {
-	// Get the next opcode
-	byte opcode = RAM[programCounter];
-
-	// Temp - end program
-	if (opcode == 0xff)
+	if (!m_cycle)
 	{
-		return true;
+		// Get the next opcode
+		byte opcode = m_pNES->Read(m_programCounter);
+
+		// Temp - end program
+		if (opcode == 0xff)
+		{
+			return true;
+		}
+
+		m_cycle = OpcodeTimings[opcode];
+		++m_programCounter;
+
+		// Retrieves the byte of data used by the opcode, using the appropriate addressing mode
+		word addr = 0x0;
+		byte value = 0x0;
+		m_hasCrossedBoundary = false;
+		switch (OpcodeAddrTypes[opcode])
+		{
+		case ADDR_IMP:
+			// Nothing, no value is used
+			break;
+		case ADDR_ACC:
+			value = m_A;
+			break;
+		case ADDR_IMM:
+			value = AddrImmediate();
+			break;
+		case ADDR_ZER:
+			addr = AddrZero();
+			break;
+		case ADDR_ZEX:
+			addr = AddrZeroX();
+			break;
+		case ADDR_ZEY:
+			addr = AddrZeroY();
+			break;
+		case ADDR_REL:
+			value = AddrRelative();
+			break;
+		case ADDR_ABS:
+			addr = AddrAbsolute();
+			break;
+		case ADDR_ABX:
+			addr = AddrAbsoluteX();
+			break;
+		case ADDR_ABY:
+			addr = AddrAbsoluteY();
+			break;
+		case ADDR_IND:
+			addr = AddrIndirect();
+			break;
+		case ADDR_INX:
+			addr = AddrIndirectX();
+			break;
+		case ADDR_INY:
+			addr = AddrIndirectY();
+			break;
+		case ADDR_NON:
+			// Should only happen for unofficial opcodes
+			assert(OpcodeAddrTypes[opcode] != ADDR_NON);
+			break;
+		}
+
+		if (OpcodeAddrTypes[opcode] != ADDR_IMP && OpcodeAddrTypes[opcode] != ADDR_ACC && OpcodeAddrTypes[opcode] != ADDR_IMM && OpcodeAddrTypes[opcode] != ADDR_REL)
+		{
+			value = m_pNES->Read(addr);
+		}
+
+		// Perform opcode using the retrieved byte
+		switch (OpcodeTypes[opcode])
+		{
+		case OP_ADC:
+			ADC(value, opcode);
+			break;
+		case OP_AND:
+			AND(value);
+			break;
+		case OP_ASL:
+			ASL(value, opcode, addr);
+			break;
+		case OP_BCC:
+			BCC(value);
+			break;
+		case OP_BCS:
+			BCS(value);
+			break;
+		case OP_BEQ:
+			BEQ(value);
+			break;
+		case OP_BIT:
+			BIT(value);
+			break;
+		case OP_BMI:
+			BMI(value);
+			break;
+		case OP_BNE:
+			BNE(value);
+			break;
+		case OP_BPL:
+			BPL(value);
+			break;
+		case OP_BRK:
+			BRK();
+			break;
+		case OP_BVC:
+			BVC(value);
+			break;
+		case OP_BVS:
+			BVS(value);
+			break;
+		case OP_CLC:
+			CLC();
+			break;
+		case OP_CLD:
+			CLD();
+			break;
+		case OP_CLI:
+			CLI();
+			break;
+		case OP_CLV:
+			CLV();
+			break;
+		case OP_CMP:
+			CMP(value);
+			break;
+		case OP_CPX:
+			CPX(value);
+			break;
+		case OP_CPY:
+			CPY(value);
+			break;
+		case OP_DEC:
+			DEC(addr);
+			break;
+		case OP_DEX:
+			DEX();
+			break;
+		case OP_DEY:
+			DEY();
+			break;
+		case OP_EOR:
+			EOR(value);
+			break;
+		case OP_INC:
+			INC(addr);
+			break;
+		case OP_INX:
+			INX();
+			break;
+		case OP_INY:
+			INY();
+			break;
+		case OP_JMP:
+			JMP(addr);
+			break;
+		case OP_JSR:
+			JSR(addr);
+			break;
+		case OP_LDA:
+			LDA(value);
+			break;
+		case OP_LDX:
+			LDX(value);
+			break;
+		case OP_LDY:
+			LDY(value);
+			break;
+		case OP_LSR:
+			LSR(value, opcode, addr);
+			break;
+		case OP_NOP:
+			NOP();
+			break;
+		case OP_ORA:
+			ORA(value);
+			break;
+		case OP_PHA:
+			PHA();
+			break;
+		case OP_PHP:
+			PHP();
+			break;
+		case OP_PLA:
+			PLA();
+			break;
+		case OP_PLP:
+			PLP();
+			break;
+		case OP_ROL:
+			ROL(value, opcode, addr);
+			break;
+		case OP_ROR:
+			ROR(value, opcode, addr);
+			break;
+		case OP_RTI:
+			RTI();
+			break;
+		case OP_RTS:
+			RTS();
+			break;
+		case OP_SBC:
+			SBC(value);
+			break;
+		case OP_SEC:
+			SEC();
+			break;
+		case OP_SED:
+			SED();
+			break;
+		case OP_SEI:
+			SEI();
+			break;
+		case OP_STA:
+			STA(addr);
+			break;
+		case OP_STX:
+			STX(addr);
+			break;
+		case OP_STY:
+			STY(addr);
+			break;
+		case OP_TAX:
+			TAX();
+			break;
+		case OP_TAY:
+			TAY();
+			break;
+		case OP_TSX:
+			TSX();
+			break;
+		case OP_TXA:
+			TXA();
+			break;
+		case OP_TXS:
+			TXS();
+			break;
+		case OP_TYA:
+			TYA();
+			break;
+		case OP_NON:
+			assert(OpcodeTypes[opcode] != OP_NON);
+			break;
+
+		}
 	}
 
-	++programCounter;
-
-	// Retrieves the byte of data used by the opcode, using the appropriate addressing mode
-	word addr = 0x0;
-	byte value = 0x0;
-	switch (OpcodeAddrTypes[opcode])
-	{
-	case ADDR_IMP:
-		// Nothing, no value is used
-		break;
-	case ADDR_ACC:
-		value = A;
-		break;
-	case ADDR_IMM:
-		value = AddrImmediate();
-		break;
-	case ADDR_ZER:
-		addr = AddrZero();
-		break;
-	case ADDR_ZEX:
-		addr = AddrZeroX();
-		break;
-	case ADDR_ZEY:
-		addr = AddrZeroY();
-		break;
-	case ADDR_REL:
-		value = AddrRelative();
-		break;
-	case ADDR_ABS:
-		addr = AddrAbsolute();
-		break;
-	case ADDR_ABX:
-		addr = AddrAbsoluteX();
-		break;
-	case ADDR_ABY:
-		addr = AddrAbsoluteY();
-		break;
-	case ADDR_IND:
-		addr = AddrIndirect();
-		break;
-	case ADDR_INX:
-		addr = AddrIndirectX();
-		break;
-	case ADDR_INY:
-		addr = AddrIndirectY();
-		break;
-	case ADDR_NON:
-		// Should only happen for unofficial opcodes
-		assert(OpcodeAddrTypes[opcode] != ADDR_NON);
-		break;
-	}
-
-	if (OpcodeAddrTypes[opcode] != ADDR_IMP && OpcodeAddrTypes[opcode] != ADDR_ACC && OpcodeAddrTypes[opcode] != ADDR_IMM && OpcodeAddrTypes[opcode] != ADDR_REL)
-	{
-		value = RAM[addr];
-	}
-
-	// Perform opcode using the retrieved byte
-	switch (OpcodeTypes[opcode])
-	{
-	case OP_ADC:
-		ADC(value);
-		break;
-	case OP_AND:
-		AND(value);
-		break;
-	case OP_ASL:
-		ASL(value, opcode, addr);
-		break;
-	case OP_BCC:
-		BCC(value);
-		break;
-	case OP_BCS:
-		BCS(value);
-		break;
-	case OP_BEQ:
-		BEQ(value);
-		break;
-	case OP_BIT:
-		BIT(value);
-		break;
-	case OP_BMI:
-		BMI(value);
-		break;
-	case OP_BNE:
-		BNE(value);
-		break;
-	case OP_BPL:
-		BPL(value);
-		break;
-	case OP_BRK:
-		BRK();
-		break;
-	case OP_BVC:
-		BVC(value);
-		break;
-	case OP_BVS:
-		BVS(value);
-		break;
-	case OP_CLC:
-		CLC();
-		break;
-	case OP_CLD:
-		CLD();
-		break;
-	case OP_CLI:
-		CLI();
-		break;
-	case OP_CLV:
-		CLV();
-		break;
-	case OP_CMP:
-		CMP(value);
-		break;
-	case OP_CPX:
-		CPX(value);
-		break;
-	case OP_CPY:
-		CPY(value);
-		break;
-	case OP_DEC:
-		DEC(addr);
-		break;
-	case OP_DEX:
-		DEX();
-		break;
-	case OP_DEY:
-		DEY();
-		break;
-	case OP_EOR:
-		EOR(value);
-		break;
-	case OP_INC:
-		INC(addr);
-		break;
-	case OP_INX:
-		INX();
-		break;
-	case OP_INY:
-		INY();
-		break;
-	case OP_JMP:
-		JMP(addr);
-		break;
-	case OP_JSR:
-		JSR(addr);
-		break;
-	case OP_LDA:
-		LDA(value);
-		break;
-	case OP_LDX:
-		LDX(value);
-		break;
-	case OP_LDY:
-		LDY(value);
-		break;
-	case OP_LSR:
-		LSR(value, opcode, addr);
-		break;
-	case OP_NOP:
-		NOP();
-		break;
-	case OP_ORA:
-		ORA(value);
-		break;
-	case OP_PHA:
-		PHA();
-		break;
-	case OP_PHP:
-		PHP();
-		break;
-	case OP_PLA:
-		PLA();
-		break;
-	case OP_PLP:
-		PLP();
-		break;
-	case OP_ROL:
-		ROL(value, opcode, addr);
-		break;
-	case OP_ROR:
-		ROR(value, opcode, addr);
-		break;
-	case OP_RTI:
-		RTI();
-		break;
-	case OP_RTS:
-		RTS();
-		break;
-	case OP_SBC:
-		SBC(value);
-		break;
-	case OP_SEC:
-		SEC();
-		break;
-	case OP_SED:
-		SED();
-		break;
-	case OP_SEI:
-		SEI();
-		break;
-	case OP_STA:
-		STA(addr);
-		break;
-	case OP_STX:
-		STX(addr);
-		break;
-	case OP_STY:
-		STY(addr);
-		break;
-	case OP_TAX:
-		TAX();
-		break;
-	case OP_TAY:
-		TAY();
-		break;
-	case OP_TSX:
-		TSX();
-		break;
-	case OP_TXA:
-		TXA();
-		break;
-	case OP_TXS:
-		TXS();
-		break;
-	case OP_TYA:
-		TYA();
-		break;
-	case OP_NON:
-		assert(OpcodeTypes[opcode] != OP_NON);
-		break;
-	}
+	--m_cycle;
 
 	return false;
 }
@@ -330,8 +331,8 @@ bool CPU::Update()
 byte CPU::AddrImmediate()
 {
 	// Get byte after the opcode
-	byte value = RAM[programCounter];
-	++programCounter;
+	byte value = m_pNES->Read(m_programCounter);
+	++m_programCounter;
 
 	return value;
 }
@@ -339,9 +340,9 @@ byte CPU::AddrImmediate()
 byte CPU::AddrZero()
 {
 	// Get byte after the opcode
-	byte addr = RAM[programCounter];
+	byte addr = m_pNES->Read(m_programCounter);
 
-	++programCounter;
+	++m_programCounter;
 
 	// Use this byte as a zero page address
 	return addr;
@@ -350,9 +351,9 @@ byte CPU::AddrZero()
 byte CPU::AddrZeroX()
 {
 	// Offset address by X - using a byte data type will make the address wrap around as expected
-	byte addr = RAM[programCounter] + X;
+	byte addr = m_pNES->Read(m_programCounter) + m_X;
 
-	++programCounter;
+	++m_programCounter;
 
 	// Use this byte as a zero page address
 	return addr;
@@ -361,9 +362,9 @@ byte CPU::AddrZeroX()
 byte CPU::AddrZeroY()
 {
 	// Offset address by Y - using a byte data type will make the address wrap around as expected
-	byte addr = RAM[programCounter] + Y;
+	byte addr = m_pNES->Read(m_programCounter) + m_Y;
 
-	++programCounter;
+	++m_programCounter;
 
 	// Use this byte as a zero page address
 	return addr;
@@ -372,8 +373,8 @@ byte CPU::AddrZeroY()
 byte CPU::AddrRelative()
 {
 	// Get byte after the opcode
-	byte relAddr = RAM[programCounter];
-	++programCounter;
+	byte relAddr = m_pNES->Read(m_programCounter);
+	++m_programCounter;
 
 	return relAddr;
 }
@@ -381,13 +382,13 @@ byte CPU::AddrRelative()
 word CPU::AddrAbsolute()
 {
 	// Get byte after the opcode
-	byte addrLow = RAM[programCounter];
+	byte addrLow = m_pNES->Read(m_programCounter);
 
 	// Get next byte
-	++programCounter;
-	byte addrHigh = RAM[programCounter];
+	++m_programCounter;
+	byte addrHigh = m_pNES->Read(m_programCounter);
 
-	++programCounter;
+	++m_programCounter;
 
 	// Combine for actual address
 	return CombineAddrBytes(addrHigh, addrLow);
@@ -396,59 +397,67 @@ word CPU::AddrAbsolute()
 word CPU::AddrAbsoluteX()
 {
 	// Get byte after the opcode
-	byte addrLow = RAM[programCounter];
+	byte addrLow = m_pNES->Read(m_programCounter);
+	++m_programCounter;
 
 	// Get next byte
-	++programCounter;
-	byte addrHigh = RAM[programCounter];
-
-	++programCounter;
+	byte addrHigh = m_pNES->Read(m_programCounter);
+	++m_programCounter;
 
 	// Combine for actual address
-	return CombineAddrBytes(addrHigh, addrLow) + X;
+	word valueAddr = CombineAddrBytes(addrHigh, addrLow) + m_X;
+
+	// Extra cycle if crossing boundary
+	m_hasCrossedBoundary = (valueAddr / 0x100 != addrHigh ? false : true);
+
+	return valueAddr;
 }
 
 word CPU::AddrAbsoluteY()
 {
 	// Get byte after the opcode
-	byte addrLow = RAM[programCounter];
+	byte addrLow = m_pNES->Read(m_programCounter);
+	++m_programCounter;
 
 	// Get next byte
-	++programCounter;
-	byte addrHigh = RAM[programCounter];
-
-	++programCounter;
+	byte addrHigh = m_pNES->Read(m_programCounter);
+	++m_programCounter;
 
 	// Combine for actual address
-	return CombineAddrBytes(addrHigh, addrLow) + Y;
+	word valueAddr = CombineAddrBytes(addrHigh, addrLow) + m_Y;
+
+	// Extra cycle if crossing boundary
+	m_hasCrossedBoundary = (valueAddr / 0x100 != addrHigh ? false : true);
+
+	return valueAddr;
 }
 
 word CPU::AddrIndirect()
 {
 	// Get byte after the opcode
-	word addrPointerLow = RAM[programCounter];
+	word addrPointerLow = m_pNES->Read(m_programCounter);
 
 	// Get next byte
-	++programCounter;
-	word addrPointerHigh = RAM[programCounter];
+	++m_programCounter;
+	word addrPointerHigh = m_pNES->Read(m_programCounter);
 
 	// Combine for pointer
 	word addrPointer = CombineAddrBytes(addrPointerHigh, addrPointerLow);
 
-	++programCounter;
+	++m_programCounter;
 
 	// Get final address from pointer destination
-	word addrLow = RAM[addrPointer];
+	word addrLow = m_pNES->Read(addrPointer);
 	word addrHigh;
 	if (addrPointerLow == 0xff)
 	{
 		// Emulated bug in the original 6502
 		// When crossing page boundary, reads the high byte from the same page instead of the next page
-		addrHigh = RAM[addrPointer + 1 - 0x100];
+		addrHigh = m_pNES->Read(addrPointer + 1 - 0x100);
 	}
 	else
 	{
-		addrHigh = RAM[addrPointer + 1];
+		addrHigh = m_pNES->Read(addrPointer + 1);
 	}
 
 	return CombineAddrBytes(addrHigh, addrLow);
@@ -457,13 +466,13 @@ word CPU::AddrIndirect()
 word CPU::AddrIndirectX()
 {
 	// Get pointer
-	byte addrPointer = RAM[programCounter] + X;
+	byte addrPointer = m_pNES->Read(m_programCounter) + m_X;
 
-	++programCounter;
+	++m_programCounter;
 
 	// Get address to read from
-	word addrLow = RAM[addrPointer];
-	word addrHigh = RAM[addrPointer + 1];
+	word addrLow = m_pNES->Read(addrPointer);
+	word addrHigh = m_pNES->Read(addrPointer + 1);
 
 	return CombineAddrBytes(addrHigh, addrLow);
 }
@@ -471,59 +480,77 @@ word CPU::AddrIndirectX()
 word CPU::AddrIndirectY()
 {
 	// Get pointer
-	byte addrPointer = RAM[programCounter];
+	byte addrPointer = m_pNES->Read(m_programCounter);
+	++m_programCounter;
 
-	++programCounter;
+	word addrLow = m_pNES->Read(addrPointer);
+	word addrHigh = m_pNES->Read(addrPointer + 1);
 
-	word addrLow = RAM[addrPointer];
-	word addrHigh = RAM[addrPointer + 1];
+	word valueAddr = CombineAddrBytes(addrHigh, addrLow) + m_Y;
 
-	return CombineAddrBytes(addrHigh, addrLow) + Y;
+	// Extra cycle if crossing boundary
+	m_hasCrossedBoundary = (valueAddr / 0x100 != addrHigh ? false : true);
+
+	return valueAddr;
 }
 
 void CPU::Branch(byte value)
 {
+	word previousCounter = m_programCounter;
 	if (value & 0x80)
 	{
 		byte reverseValue = 0x100 - value;
-		programCounter -= reverseValue;
+		m_programCounter -= reverseValue;
 	}
 	else
 	{
-		programCounter += value;
+		m_programCounter += value;
+	}
+
+	// 2 cycles if no branch - default
+	// 3 cycles if normal branch
+	// 4 cycles if crossing page
+	if (!( (m_programCounter & 0xff00) != (previousCounter & 0xff00) ))
+	{
+		++m_cycle;
+	}
+	else
+	{
+		// If page crossed
+		m_cycle += 2;
 	}
 }
 
 void CPU::PCFromStack()
 {
-	++stackPointer;
-	byte lowByte = RAM[0x100 + stackPointer];
-	++stackPointer;
-	byte highByte = RAM[0x100 + stackPointer];
+	++m_stackPointer;
+	byte lowByte = m_pNES->Read(0x100 + m_stackPointer);
+	++m_stackPointer;
+	byte highByte = m_pNES->Read(0x100 + m_stackPointer);
 
-	programCounter = (word)highByte * 0x100 + (word)lowByte;
+	m_programCounter = (word)highByte * 0x100 + (word)lowByte;
 }
 
 void CPU::PCToStack()
 {
-	byte lowByte = programCounter & 0xff;
-	byte highByte = (programCounter - lowByte) / 0x100;
+	byte lowByte = m_programCounter & 0xff;
+	byte highByte = (m_programCounter - lowByte) / 0x100;
 
-	RAM[0x0100 + stackPointer] = highByte;
-	--stackPointer;
-	RAM[0x0100 + stackPointer] = lowByte;
-	--stackPointer;
+	m_pNES->Write(highByte, 0x100 + m_stackPointer);
+	--m_stackPointer;
+	m_pNES->Write(lowByte, 0x100 + m_stackPointer);
+	--m_stackPointer;
 }
 
 void CPU::FlagsToStack()
 {
-	byte status =	0x1 * (byte)statusFlags[FLAG_CARRY] + 0x2 * (byte)statusFlags[FLAG_ZERO] + 0x4 * (byte)statusFlags[FLAG_INTERRUPT_DISABLE] + 0x8 * (byte)statusFlags[FLAG_DECIMAL]
-					+ 0x10 * (byte)statusFlags[FLAG_BREAK] + 0x20 * (byte)statusFlags[FLAG_UNUSED] + 0x40 * (byte)statusFlags[FLAG_OVERFLOW] + 0x80 * (byte)statusFlags[FLAG_NEGATIVE];
+	byte status =	0x1 * (byte)m_statusFlags[FLAG_CARRY] + 0x2 * (byte)m_statusFlags[FLAG_ZERO] + 0x4 * (byte)m_statusFlags[FLAG_INTERRUPT_DISABLE] + 0x8 * (byte)m_statusFlags[FLAG_DECIMAL]
+					+ 0x10 * (byte)m_statusFlags[FLAG_BREAK] + 0x20 * (byte)m_statusFlags[FLAG_UNUSED] + 0x40 * (byte)m_statusFlags[FLAG_OVERFLOW] + 0x80 * (byte)m_statusFlags[FLAG_NEGATIVE];
 
 	// Possibly - clear the B and U flags?
 
-	RAM[0x100 + stackPointer] = status;
-	--stackPointer;
+	m_pNES->Write(status, 0x100 + m_stackPointer);
+	--m_stackPointer;
 }
 
 word CPU::CombineAddrBytes(byte high, byte low)
@@ -532,50 +559,56 @@ word CPU::CombineAddrBytes(byte high, byte low)
 }
 
 // Overflow logic from stackoverflow.com/questions/16845912/determining-carry-and-overflow-flag-in-6502-emulation-in-java
-void CPU::ADC(byte value)
+void CPU::ADC(byte value, byte opcode)
 {
-	word tempA = A + value + (byte)statusFlags[FLAG_CARRY];
+	word tempA = m_A + value + (byte)m_statusFlags[FLAG_CARRY];
 
-	statusFlags[FLAG_CARRY] = (tempA & 0xff00 ? true : false);
-	statusFlags[FLAG_OVERFLOW] = ((~(A ^ value)) & (A ^ tempA) & 0x80 ? true : false);
+	m_statusFlags[FLAG_CARRY] = (tempA & 0xff00 ? true : false);
+	m_statusFlags[FLAG_OVERFLOW] = ((~(m_A ^ value)) & (m_A ^ tempA) & 0x80 ? true : false);
 
-	A = tempA & 0xff;
+	m_A = tempA & 0xff;
 
-	statusFlags[FLAG_ZERO] = (A == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (A & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_A == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_A & 0x80 ? true : false);
+
+	// Add cycle if boundary is crossed
+	m_cycle += (byte)m_hasCrossedBoundary;
 }
 
 void CPU::AND(byte value)
 {
-	A &= value;
+	m_A &= value;
 
-	statusFlags[FLAG_ZERO] = (A == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (A & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_A == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_A & 0x80 ? true : false);
+
+	// Add cycle if boundary is crossed
+	m_cycle += (byte)m_hasCrossedBoundary;
 }
 
 void CPU::ASL(byte value, byte opcode, word addr)
 {
-	statusFlags[FLAG_CARRY] = (value & 0x80 ? true : false);
+	m_statusFlags[FLAG_CARRY] = (value & 0x80 ? true : false);
 
 	// When done in 8 bit space this will produce the correct result
 	value *= 2;
 
-	statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
 
 	if (OpcodeAddrTypes[opcode] == ADDR_ACC)
 	{
-		A = value;
+		m_A = value;
 	}
 	else
 	{
-		RAM[addr] = value;
+		m_pNES->Write(value, addr);
 	}
 }
 
 void CPU::BCC(byte value)
 {
-	if (!statusFlags[FLAG_CARRY])
+	if (!m_statusFlags[FLAG_CARRY])
 	{
 		Branch(value);
 	}
@@ -583,7 +616,7 @@ void CPU::BCC(byte value)
 
 void CPU::BCS(byte value)
 {
-	if (statusFlags[FLAG_CARRY])
+	if (m_statusFlags[FLAG_CARRY])
 	{
 		Branch(value);
 	}
@@ -591,7 +624,7 @@ void CPU::BCS(byte value)
 
 void CPU::BEQ(byte value)
 {
-	if (statusFlags[FLAG_ZERO])
+	if (m_statusFlags[FLAG_ZERO])
 	{
 		Branch(value);
 	}
@@ -599,17 +632,17 @@ void CPU::BEQ(byte value)
 
 void CPU::BIT(byte value)
 {
-	statusFlags[FLAG_OVERFLOW] = (value & 0x40 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
+	m_statusFlags[FLAG_OVERFLOW] = (value & 0x40 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
 
-	value &= A;
+	value &= m_A;
 
-	statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
 }
 
 void CPU::BMI(byte value)
 {
-	if (statusFlags[FLAG_NEGATIVE])
+	if (m_statusFlags[FLAG_NEGATIVE])
 	{
 		Branch(value);
 	}
@@ -617,7 +650,7 @@ void CPU::BMI(byte value)
 
 void CPU::BNE(byte value)
 {
-	if (!statusFlags[FLAG_ZERO])
+	if (!m_statusFlags[FLAG_ZERO])
 	{
 		Branch(value);
 	}
@@ -625,7 +658,7 @@ void CPU::BNE(byte value)
 
 void CPU::BPL(byte value)
 {
-	if (!statusFlags[FLAG_NEGATIVE])
+	if (!m_statusFlags[FLAG_NEGATIVE])
 	{
 		Branch(value);
 	}
@@ -634,22 +667,22 @@ void CPU::BPL(byte value)
 void CPU::BRK()
 {
 	// Skip padding byte
-	++programCounter;
+	++m_programCounter;
 	PCToStack();
 
-	statusFlags[FLAG_INTERRUPT_DISABLE] = true;
-	statusFlags[FLAG_BREAK] = true;
+	m_statusFlags[FLAG_INTERRUPT_DISABLE] = true;
+	m_statusFlags[FLAG_BREAK] = true;
 	FlagsToStack();
 
 	// Hard coded pointer to IRQ at 0xfffe
-	byte lowByte = RAM[0xfffe];
-	byte highByte = RAM[0xffff];
-	programCounter = CombineAddrBytes(highByte, lowByte);
+	byte lowByte = m_pNES->Read(0xfffe);
+	byte highByte = m_pNES->Read(0xffff);
+	m_programCounter = CombineAddrBytes(highByte, lowByte);
 }
 
 void CPU::BVC(byte value)
 {
-	if (!statusFlags[FLAG_OVERFLOW])
+	if (!m_statusFlags[FLAG_OVERFLOW])
 	{
 		Branch(value);
 	}
@@ -657,7 +690,7 @@ void CPU::BVC(byte value)
 
 void CPU::BVS(byte value)
 {
-	if (statusFlags[FLAG_OVERFLOW])
+	if (m_statusFlags[FLAG_OVERFLOW])
 	{
 		Branch(value);
 	}
@@ -665,259 +698,280 @@ void CPU::BVS(byte value)
 
 void CPU::CLC()
 {
-	statusFlags[FLAG_CARRY] = false;
+	m_statusFlags[FLAG_CARRY] = false;
 }
 
 void CPU::CLD()
 {
-	statusFlags[FLAG_DECIMAL] = false;
+	m_statusFlags[FLAG_DECIMAL] = false;
 }
 
 void CPU::CLI()
 {
-	statusFlags[FLAG_INTERRUPT_DISABLE] = false;
+	m_statusFlags[FLAG_INTERRUPT_DISABLE] = false;
 }
 
 void CPU::CLV()
 {
-	statusFlags[FLAG_OVERFLOW] = false;
+	m_statusFlags[FLAG_OVERFLOW] = false;
 }
 
 void CPU::CMP(byte value)
 {
-	statusFlags[FLAG_CARRY] = (A >= value ? true : false);
-	statusFlags[FLAG_ZERO] = (A == value ? true : false);
+	m_statusFlags[FLAG_CARRY] = (m_A >= value ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_A == value ? true : false);
 
-	byte tempA = A - value;
+	byte tempA = m_A - value;
 
-	statusFlags[FLAG_NEGATIVE] = (tempA & 0x80 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (tempA & 0x80 ? true : false);
+
+	// Add cycle if boundary is crossed
+	m_cycle += (byte)m_hasCrossedBoundary;
 }
 
 void CPU::CPX(byte value)
 {
-	statusFlags[FLAG_CARRY] = (X >= value ? true : false);
-	statusFlags[FLAG_ZERO] = (X == value ? true : false);
+	m_statusFlags[FLAG_CARRY] = (m_X >= value ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_X == value ? true : false);
 
-	byte tempX = X - value;
+	byte tempX = m_X - value;
 
-	statusFlags[FLAG_NEGATIVE] = (tempX & 0x80 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (tempX & 0x80 ? true : false);
 }
 
 void CPU::CPY(byte value)
 {
-	statusFlags[FLAG_CARRY] = (Y >= value ? true : false);
-	statusFlags[FLAG_ZERO] = (Y == value ? true : false);
+	m_statusFlags[FLAG_CARRY] = (m_Y >= value ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_Y == value ? true : false);
 
-	byte tempY = Y - value;
+	byte tempY = m_Y - value;
 
-	statusFlags[FLAG_NEGATIVE] = (tempY & 0x80 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (tempY & 0x80 ? true : false);
 }
 
 void CPU::DEC(word addr)
 {
-	--RAM[addr];
+	byte value = m_pNES->Read(addr);
+	--value;
+	m_pNES->Write(value, addr);
 
-	statusFlags[FLAG_ZERO] = (RAM[addr] == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (RAM[addr] & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_pNES->Read(addr) == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_pNES->Read(addr) & 0x80 ? true : false);
 }
 
 void CPU::DEX()
 {
-	--X;
+	--m_X;
 
-	statusFlags[FLAG_ZERO] = (X == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (X & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_X == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_X & 0x80 ? true : false);
 }
 
 void CPU::DEY()
 {
-	--Y;
+	--m_Y;
 
-	statusFlags[FLAG_ZERO] = (Y == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (Y & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_Y == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_Y & 0x80 ? true : false);
 }
 
 void CPU::EOR(byte value)
 {
-	A ^= value;
+	m_A ^= value;
 
-	statusFlags[FLAG_ZERO] = (A == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (A & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_A == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_A & 0x80 ? true : false);
+
+	// Add cycle if boundary is crossed
+	m_cycle += (byte)m_hasCrossedBoundary;
 }
 
 void CPU::INC(word addr)
 {
-	++RAM[addr];
+	byte value = m_pNES->Read(addr);
+	++value;
+	m_pNES->Write(value, addr);
 
-	statusFlags[FLAG_ZERO] = (RAM[addr] == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (RAM[addr] & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_pNES->Read(addr) == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_pNES->Read(addr) & 0x80 ? true : false);
 }
 
 void CPU::INX()
 {
-	++X;
+	++m_X;
 
-	statusFlags[FLAG_ZERO] = (X == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (X & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_X == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_X & 0x80 ? true : false);
 }
 
 void CPU::INY()
 {
-	++Y;
+	++m_Y;
 
-	statusFlags[FLAG_ZERO] = (Y == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (Y & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_Y == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_Y & 0x80 ? true : false);
 }
 
 void CPU::JMP(word addr)
 {
-	programCounter = addr;
+	m_programCounter = addr;
 }
 
 void CPU::JSR(word addr)
 {
-	--programCounter;
+	--m_programCounter;
 
 	PCToStack();
 
-	programCounter = addr;
+	m_programCounter = addr;
 }
 
 void CPU::LDA(byte value)
 {
-	A = value;
+	m_A = value;
 
-	statusFlags[FLAG_ZERO] = (A == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (A & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_A == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_A & 0x80 ? true : false);
+
+	// Add cycle if boundary is crossed
+	m_cycle += (byte)m_hasCrossedBoundary;
 }
 
 void CPU::LDX(byte value)
 {
-	X = value;
+	m_X = value;
 
-	statusFlags[FLAG_ZERO] = (X == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (X & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_X == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_X & 0x80 ? true : false);
+
+	// Add cycle if boundary is crossed
+	m_cycle += (byte)m_hasCrossedBoundary;
 }
 
 void CPU::LDY(byte value)
 {
-	Y = value;
+	m_Y = value;
 
-	statusFlags[FLAG_ZERO] = (Y == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (Y & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_Y == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_Y & 0x80 ? true : false);
+
+	// Add cycle if boundary is crossed
+	m_cycle += (byte)m_hasCrossedBoundary;
 }
 
 void CPU::LSR(byte value, byte opcode, word addr)
 {
-	statusFlags[FLAG_CARRY] = (value & 0x1 ? true : false);
+	m_statusFlags[FLAG_CARRY] = (value & 0x1 ? true : false);
 
 	value / 2;
 
-	statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
 
 	if (OpcodeAddrTypes[opcode] == ADDR_ACC)
 	{
-		A = value;
+		m_A = value;
 	}
 	else
 	{
-		RAM[addr] = value;
+		m_pNES->Write(value, addr);
 	}
 }
 
 void CPU::NOP()
 {
 	// Nothing
-	// Don't forget to add clock cycles here when you get to those!
 }
 
 void CPU::ORA(byte value)
 {
-	A |= value;
+	m_A |= value;
 
-	statusFlags[FLAG_ZERO] = (A == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (A & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_A == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_A & 0x80 ? true : false);
+
+	// Add cycle if boundary is crossed
+	m_cycle += (byte)m_hasCrossedBoundary;
 }
 
 void CPU::PHA()
 {
-	RAM[0x100 + stackPointer] = A;
-	--stackPointer;
+	m_pNES->Write(m_A, 0x100 + m_stackPointer);
+	--m_stackPointer;
 }
 
 void CPU::PHP()
 {
-	statusFlags[FLAG_BREAK] = true;
+	m_statusFlags[FLAG_BREAK] = true;
 
 	FlagsToStack();
 }
 
 void CPU::PLA()
 {
-	++stackPointer;
-	A = RAM[0x100 + stackPointer];
+	++m_stackPointer;
+	m_A = m_pNES->Read(0x100 + m_stackPointer);
 
-	statusFlags[FLAG_ZERO] = (A == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (A & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_A == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_A & 0x80 ? true : false);
 }
 
 void CPU::PLP()
 {
-	++stackPointer;
-	byte status = RAM[0x100 + stackPointer];
+	++m_stackPointer;
+	byte status = m_pNES->Read(0x100 + m_stackPointer);
 
-	statusFlags[FLAG_CARRY] = status & 0x1;
-	statusFlags[FLAG_ZERO] = status & 0x2;
-	statusFlags[FLAG_INTERRUPT_DISABLE] = status & 0x4;
-	statusFlags[FLAG_DECIMAL] = status & 0x8;
-	statusFlags[FLAG_BREAK] = status & 0x10;
-	statusFlags[FLAG_UNUSED] = true;
-	statusFlags[FLAG_OVERFLOW] = status & 0x40;
-	statusFlags[FLAG_NEGATIVE] = status & 0x80;
+	m_statusFlags[FLAG_CARRY] = status & 0x1;
+	m_statusFlags[FLAG_ZERO] = status & 0x2;
+	m_statusFlags[FLAG_INTERRUPT_DISABLE] = status & 0x4;
+	m_statusFlags[FLAG_DECIMAL] = status & 0x8;
+	m_statusFlags[FLAG_BREAK] = status & 0x10;
+	m_statusFlags[FLAG_UNUSED] = true;
+	m_statusFlags[FLAG_OVERFLOW] = status & 0x40;
+	m_statusFlags[FLAG_NEGATIVE] = status & 0x80;
 }
 
 void CPU::ROL(byte value, byte opcode, word addr)
 {
-	bool oldCarry = statusFlags[FLAG_CARRY];
-	statusFlags[FLAG_CARRY] = (value & 0x80 ? true : false);
+	bool oldCarry = m_statusFlags[FLAG_CARRY];
+	m_statusFlags[FLAG_CARRY] = (value & 0x80 ? true : false);
 
 	value *= 2;
 	// Set bit 0 to the old carry flag
 	value |= (byte)oldCarry;
 
-	statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
 
 	if (OpcodeAddrTypes[opcode] == ADDR_ACC)
 	{
-		A = value;
+		m_A = value;
 	}
 	else
 	{
-		RAM[addr] = value;
+		m_pNES->Write(value, addr);
 	}
 }
 
 void CPU::ROR(byte value, byte opcode, word addr)
 {
-	byte oldCarry = (byte)statusFlags[FLAG_CARRY];
+	byte oldCarry = (byte)m_statusFlags[FLAG_CARRY];
 	oldCarry *= 0x80;
-	statusFlags[FLAG_CARRY] = (value & 0x1 ? true : false);
+	m_statusFlags[FLAG_CARRY] = (value & 0x1 ? true : false);
 
 	value /= 2;
 	value |= oldCarry;
 
-	statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (value == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (value & 0x80 ? true : false);
 
 	if (OpcodeAddrTypes[opcode] == ADDR_ACC)
 	{
-		A = value;
+		m_A = value;
 	}
 	else
 	{
-		RAM[addr] = value;
+		m_pNES->Write(value, addr);
 	}
 }
 
@@ -934,93 +988,96 @@ void CPU::RTS()
 	// Same for subroutines!
 	PCFromStack();
 
-	++programCounter;
+	++m_programCounter;
 }
 
 void CPU::SBC(byte value)
 {
-	word tempA = A - value - ( 0x1 - (byte)statusFlags[FLAG_CARRY] );
+	word tempA = m_A - value - ( 0x1 - (byte)m_statusFlags[FLAG_CARRY] );
 
-	statusFlags[FLAG_CARRY] = (tempA & 0xff00 ? true : false);
-	statusFlags[FLAG_OVERFLOW] = ((~(A ^ value)) & (A ^ tempA) & 0x80 ? true : false);
+	m_statusFlags[FLAG_CARRY] = (tempA & 0xff00 ? true : false);
+	m_statusFlags[FLAG_OVERFLOW] = ((~(m_A ^ value)) & (m_A ^ tempA) & 0x80 ? true : false);
 
-	A = tempA & 0xff;
+	m_A = tempA & 0xff;
 
-	statusFlags[FLAG_ZERO] = (A == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (A & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_A == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_A & 0x80 ? true : false);
+
+	// Add cycle if boundary is crossed
+	m_cycle += (byte)m_hasCrossedBoundary;
 }
 
 void CPU::SEC()
 {
-	statusFlags[FLAG_CARRY] = true;
+	m_statusFlags[FLAG_CARRY] = true;
 }
 
 void CPU::SED()
 {
-	statusFlags[FLAG_DECIMAL] = true;
+	m_statusFlags[FLAG_DECIMAL] = true;
 }
 
 void CPU::SEI()
 {
-	statusFlags[FLAG_INTERRUPT_DISABLE] = true;
+	m_statusFlags[FLAG_INTERRUPT_DISABLE] = true;
 }
 
 void CPU::STA(word addr)
 {
-	RAM[addr] = A;
+	m_pNES->Write(m_A, addr);
 }
 
 void CPU::STX(word addr)
 {
-	RAM[addr] = X;
+	m_pNES->Write(m_X, addr);
 }
 
 void CPU::STY(word addr)
 {
-	RAM[addr] = Y;
+	m_pNES->Write(m_Y, addr);
 }
 
 void CPU::TAX()
 {
-	X = A;
+	m_X = m_A;
 
-	statusFlags[FLAG_ZERO] = (X == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (X & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_X == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_X & 0x80 ? true : false);
 }
 
 void CPU::TAY()
 {
-	Y = A;
+	m_Y = m_A;
 
-	statusFlags[FLAG_ZERO] = (Y == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (Y & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_Y == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_Y & 0x80 ? true : false);
 }
 
 void CPU::TSX()
 {
-	X = stackPointer;
+	m_X = m_stackPointer;
 
-	statusFlags[FLAG_ZERO] = (X == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (X & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_X == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_X & 0x80 ? true : false);
 }
 
 void CPU::TXA()
 {
-	A = X;
+	m_A = m_X;
 
-	statusFlags[FLAG_ZERO] = (A == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (A & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_A == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_A & 0x80 ? true : false);
 }
 
 void CPU::TXS()
 {
-	stackPointer = X;
+	m_stackPointer = m_X;
 }
 
 void CPU::TYA()
 {
-	A = Y;
+	m_A = m_Y;
 
-	statusFlags[FLAG_ZERO] = (Y == 0x0 ? true : false);
-	statusFlags[FLAG_NEGATIVE] = (Y & 0x80 ? true : false);
+	m_statusFlags[FLAG_ZERO] = (m_Y == 0x0 ? true : false);
+	m_statusFlags[FLAG_NEGATIVE] = (m_Y & 0x80 ? true : false);
 }

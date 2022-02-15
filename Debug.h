@@ -1,5 +1,5 @@
 #pragma once
-#include "CPU.h"
+#include "NES.h"
 #include <iostream>
 
 class Debug
@@ -50,9 +50,9 @@ public:
 		return "0x" + Chars[thousands] + Chars[hundreds] + Chars[tens] + Chars[digits];
 	}
 
-	void OutputLine(CPU* cpu)
+	void OutputLine(ROM* rom, CPU* cpu)
 	{
-		std::cout << HexString(cpu->programCounter) << ":        " << AddrStrings[cpu->OpcodeAddrTypes[cpu->RAM[cpu->programCounter]]] << "    " << OpStrings[cpu->OpcodeTypes[cpu->RAM[cpu->programCounter]]] << "    " << HexString(cpu->RAM[cpu->programCounter]) <<
-			"    |    " << "A = " << HexString(cpu->A) << ",  " << "X = " << HexString(cpu->X) << ",  " << "Y = " << HexString(cpu->Y) << std::endl;
+		std::cout << HexString(cpu->m_programCounter) << ":        " << AddrStrings[cpu->OpcodeAddrTypes[rom->Read(cpu->m_programCounter)]] << "    " << OpStrings[cpu->OpcodeTypes[rom->Read(cpu->m_programCounter)]] << "    " << HexString(rom->Read(cpu->m_programCounter)) <<
+			"    |    " << "A = " << HexString(cpu->m_A) << ",  " << "X = " << HexString(cpu->m_X) << ",  " << "Y = " << HexString(cpu->m_Y) << std::endl;
 	}
 };
