@@ -53,6 +53,6 @@ public:
 	void OutputLine(ROM* rom, CPU* cpu)
 	{
 		std::cout << HexString(cpu->m_programCounter) << ":        " << AddrStrings[cpu->OpcodeAddrTypes[rom->Read(cpu->m_programCounter)]] << "    " << OpStrings[cpu->OpcodeTypes[rom->Read(cpu->m_programCounter)]] << "    " << HexString(rom->Read(cpu->m_programCounter)) <<
-			"    |    " << "A = " << HexString(cpu->m_A) << ",  " << "X = " << HexString(cpu->m_X) << ",  " << "Y = " << HexString(cpu->m_Y) << std::endl;
+			"    |    " << "A = " << HexString(cpu->m_A) << ",  " << "X = " << HexString(cpu->m_X) << ",  " << "Y = " << HexString(cpu->m_Y) << "    |    " << "Cycle: " << cpu->m_totalCycles << std::endl;
 	}
 };

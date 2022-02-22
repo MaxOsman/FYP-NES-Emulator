@@ -117,26 +117,6 @@ public:
 		2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0
 	};
 
-	/*const bool CanHaveExtraCycle[0x100] =
-	{
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, true, false, false, false, false, false, false, false, true, false, false, false, true, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, true, false, false, false, false, false, false, false, true, false, false, false, true, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, true, false, false, false, false, false, false, false, true, false, false, false, true, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, true, false, false, false, false, false, false, false, true, false, false, false, true, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
-		false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false
-	};*/
-
 	// Registers
 	byte m_A, m_X, m_Y;
 	word m_programCounter;
@@ -147,6 +127,7 @@ public:
 
 	byte m_cycle;
 	bool m_hasCrossedBoundary;
+	unsigned long long int m_totalCycles;
 
 	CPU(NES* parentNES);
 	~CPU();

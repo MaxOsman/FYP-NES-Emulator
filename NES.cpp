@@ -24,7 +24,8 @@ void NES::Update()
 {
 	while (!m_pCPU->Update())
 	{
-		m_pDebug->OutputLine(m_pROM, m_pCPU);
+		if(m_pCPU->m_cycle == 0)
+			m_pDebug->OutputLine(m_pROM, m_pCPU);
 	}
 }
 
@@ -38,6 +39,7 @@ byte NES::Read(word addr)
 	else if (addr < 0x4000)
 	{
 		// PPU registers
+		return 0xff;
 	}
 	else if (addr < 0x4018)
 	{

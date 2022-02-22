@@ -5,6 +5,7 @@
 CPU::CPU(NES* parentNES)
 {
 	m_pNES = parentNES;
+	m_totalCycles = 0;
 
 	RESET();
 }
@@ -324,6 +325,7 @@ bool CPU::Update()
 	}
 
 	--m_cycle;
+	++m_totalCycles;
 
 	return false;
 }
