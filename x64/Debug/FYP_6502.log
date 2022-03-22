@@ -1,0 +1,7 @@
+﻿  PPU.cpp
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\PPU.cpp(35,23): warning C4150: deletion of pointer to incomplete type 'SDL_Texture'; no destructor called
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\SDL2-2.0.20\include\SDL_render.h(147): message : see declaration of 'SDL_Texture'
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\PPU.cpp(50,7): warning C4101: 'lowBit': unreferenced local variable
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\PPU.cpp(50,15): warning C4101: 'highBit': unreferenced local variable
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\PPU.cpp(280): warning C4715: 'PPU::ReadFromPPU': not all control paths return a value
+  FYP_6502.vcxproj -> E:\Uni\_Year 3\Games Tech Project\FYP_6502\x64\Debug\FYP_6502.exe

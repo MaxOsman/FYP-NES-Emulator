@@ -1,0 +1,50 @@
+﻿  CPU.cpp
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): warning C4477: 'printf' : format string '%d' requires an argument of type 'int', but variadic argument 1 has type 'unsigned __int64'
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%lld' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%Id' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%I64d' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(436,55): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(436,38): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(454,36): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(454,26): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(468,36): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(468,26): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(480,46): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(480,36): warning C4244: 'argument': conversion from 'word' to 'byte', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\CPU.cpp(857,8): warning C4552: '/': result of expression not used
+  NES.cpp
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): warning C4477: 'printf' : format string '%d' requires an argument of type 'int', but variadic argument 1 has type 'unsigned __int64'
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%lld' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%Id' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%I64d' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(29,23): warning C4150: deletion of pointer to incomplete type 'SDL_Texture'; no destructor called
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\SDL2-2.0.20\include\SDL_render.h(147): message : see declaration of 'SDL_Texture'
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(42,26): warning C4244: '=': conversion from 'unsigned __int64' to 'int', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(61,54): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(61,30): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(120,32): warning C4838: conversion from 'float' to 'int' requires a narrowing conversion
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(120,32): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(120,44): warning C4838: conversion from 'float' to 'int' requires a narrowing conversion
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(120,44): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+  PPU.cpp
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): warning C4477: 'printf' : format string '%d' requires an argument of type 'int', but variadic argument 1 has type 'unsigned __int64'
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%lld' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%Id' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%I64d' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\PPU.cpp(27,23): warning C4150: deletion of pointer to incomplete type 'SDL_Texture'; no destructor called
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\SDL2-2.0.20\include\SDL_render.h(147): message : see declaration of 'SDL_Texture'
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\PPU.cpp(42,7): warning C4101: 'lowBit': unreferenced local variable
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\PPU.cpp(42,15): warning C4101: 'highBit': unreferenced local variable
+  ROM.cpp
+  main.cpp
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): warning C4477: 'printf' : format string '%d' requires an argument of type 'int', but variadic argument 1 has type 'unsigned __int64'
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%lld' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%Id' in the format string
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\Debug.h(55,10): message : consider using '%I64d' in the format string
+  Generating code
+  Compiler switch has changed, fall back to full compilation.
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\ROM.cpp(127): warning C4715: 'ROM::Read': not all control paths return a value
+E:\Uni\_Year 3\Games Tech Project\FYP_6502\NES.cpp(92): warning C4715: 'NES::Read': not all control paths return a value
+  All 335 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  FYP_6502.vcxproj -> E:\Uni\_Year 3\Games Tech Project\FYP_6502\x64\Release\FYP_6502.exe
