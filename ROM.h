@@ -13,6 +13,12 @@ public:
 
 	byte Read(word addr);
 
+	Tile* GetCHR() { return m_pCHR; }
+	bool GetMirroring() { return m_isVerticalMirroring; }
+
 private:
-	byte* m_memory = new byte[0x8000];
+	byte* m_pPRG = new byte[0x8000];
+	Tile* m_pCHR = new Tile[512];
+
+	bool m_isVerticalMirroring;
 };

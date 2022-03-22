@@ -74,18 +74,12 @@ void CPU::IRQ()
 	}
 }
 
-bool CPU::Update()
+void CPU::Update()
 {
 	if (!m_cycle)
 	{
 		// Get the next opcode
 		byte opcode = m_pNES->Read(m_programCounter);
-
-		// Temp - end program
-		if (opcode == 0xff)
-		{
-			return true;
-		}
 
 		m_cycle = OpcodeTimings[opcode];
 		++m_programCounter;
@@ -96,9 +90,6 @@ bool CPU::Update()
 		m_hasCrossedBoundary = false;
 		switch (OpcodeAddrTypes[opcode])
 		{
-		case ADDR_IMP:
-			// Nothing, no value is used
-			break;
 		case ADDR_ACC:
 			value = m_A;
 			break;
@@ -113,9 +104,6 @@ bool CPU::Update()
 			break;
 		case ADDR_ZEY:
 			addr = AddrZeroY();
-			break;
-		case ADDR_REL:
-			value = AddrRelative();
 			break;
 		case ADDR_ABS:
 			addr = AddrAbsolute();
@@ -141,51 +129,70 @@ bool CPU::Update()
 			break;
 		}
 
-		if (OpcodeAddrTypes[opcode] != ADDR_IMP && OpcodeAddrTypes[opcode] != ADDR_ACC && OpcodeAddrTypes[opcode] != ADDR_IMM && OpcodeAddrTypes[opcode] != ADDR_REL)
-		{
-			value = m_pNES->Read(addr);
-		}
-
 		// Perform opcode using the retrieved byte
 		switch (OpcodeTypes[opcode])
 		{
 		case OP_ADC:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			ADC(value, opcode);
 			break;
 		case OP_AND:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			AND(value);
 			break;
 		case OP_ASL:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			ASL(value, opcode, addr);
 			break;
 		case OP_BCC:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			BCC(value);
 			break;
 		case OP_BCS:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			BCS(value);
 			break;
 		case OP_BEQ:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			BEQ(value);
 			break;
 		case OP_BIT:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			BIT(value);
 			break;
 		case OP_BMI:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			BMI(value);
 			break;
 		case OP_BNE:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			BNE(value);
 			break;
 		case OP_BPL:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			BPL(value);
 			break;
 		case OP_BRK:
 			BRK();
 			break;
 		case OP_BVC:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			BVC(value);
 			break;
 		case OP_BVS:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			BVS(value);
 			break;
 		case OP_CLC:
@@ -201,24 +208,36 @@ bool CPU::Update()
 			CLV();
 			break;
 		case OP_CMP:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			CMP(value);
 			break;
 		case OP_CPX:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			CPX(value);
 			break;
 		case OP_CPY:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			CPY(value);
 			break;
 		case OP_DEC:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			DEC(addr);
 			break;
 		case OP_DEX:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			DEX();
 			break;
 		case OP_DEY:
 			DEY();
 			break;
 		case OP_EOR:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			EOR(value);
 			break;
 		case OP_INC:
@@ -237,21 +256,31 @@ bool CPU::Update()
 			JSR(addr);
 			break;
 		case OP_LDA:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			LDA(value);
 			break;
 		case OP_LDX:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			LDX(value);
 			break;
 		case OP_LDY:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			LDY(value);
 			break;
 		case OP_LSR:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			LSR(value, opcode, addr);
 			break;
 		case OP_NOP:
 			NOP();
 			break;
 		case OP_ORA:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			ORA(value);
 			break;
 		case OP_PHA:
@@ -267,9 +296,13 @@ bool CPU::Update()
 			PLP();
 			break;
 		case OP_ROL:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			ROL(value, opcode, addr);
 			break;
 		case OP_ROR:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			ROR(value, opcode, addr);
 			break;
 		case OP_RTI:
@@ -279,6 +312,8 @@ bool CPU::Update()
 			RTS();
 			break;
 		case OP_SBC:
+			if (OpcodeAddrTypes[opcode] >= ADDR_ZER)
+				value = m_pNES->Read(addr);
 			SBC(value);
 			break;
 		case OP_SEC:
@@ -320,14 +355,11 @@ bool CPU::Update()
 		case OP_NON:
 			assert(OpcodeTypes[opcode] != OP_NON);
 			break;
-
 		}
 	}
 
 	--m_cycle;
 	++m_totalCycles;
-
-	return false;
 }
 
 byte CPU::AddrImmediate()

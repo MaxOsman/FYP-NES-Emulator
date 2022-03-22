@@ -8,13 +8,18 @@ ROM::ROM()
 {
 	for (unsigned int i = 0; i < 0x8000; ++i)
 	{
-		m_memory[i] = 0xff;
+		m_pPRG[i] = 0xff;
+	}
+	for (unsigned int i = 0; i < 512; ++i)
+	{
+		m_pPRG[i] = 0x0;
 	}
 }
 
 ROM::~ROM()
 {
-	delete[] m_memory;
+	delete[] m_pPRG;
+	delete[] m_pCHR;
 }
 
 void ROM::LoadROM()
@@ -39,6 +44,10 @@ void ROM::LoadROM()
 			// First 4 bytes should be "NES" + DOS end-of-file character
 			// ROM is valid
 
+			// ROM mirroring
+			byte mirror = romHeader[6] & 0b00000001;
+			m_isVerticalMirroring = (bool)mirror;
+
 			// Load trainer, if present
 			if (romHeader[6] & 0b00000100)
 			{
@@ -60,19 +69,37 @@ void ROM::LoadROM()
 				// Load PRG ROM
 				for (unsigned int i = 0; i < prgSize; ++i)
 				{
-					m_memory[i] = romPRG[i];
+					m_pPRG[i] = romPRG[i];
 				}
 				if (romHeader[4] == 0x1)
 				{
 					// If PRG does not take up all $8000 bytes, then it is mirrored, e.g. in Donkey Kong it has $4000 bytes of ROM, but two instances of it
 					for (unsigned int i = 0; i < prgSize; ++i)
 					{
-						m_memory[0x4000 + i] = romPRG[i];
+						m_pPRG[0x4000 + i] = romPRG[i];
 					}
 				}
 
 				// Load CHR ROM
-				// To do once PPU made
+				bool bitplaneLow[64];
+				bool bitplaneHigh[64];
+				for (unsigned int i = 0; i < 512; ++i)
+				{
+					// Each byte on a line, 1st half then last half
+					for (unsigned int j = 0; j < 8; ++j)
+					{
+						// Each bit in the byte
+						byte mask = 0b10000000;
+						for (unsigned int k = 0; k < 8; ++k)
+						{
+							bitplaneLow[8 * j + k] = romCHR[16 * i + j] & mask;
+							bitplaneHigh[8 * j + k] = romCHR[16 * i + j + 8] & mask;
+							m_pCHR[i].colours[8 * j + k] = (byte)bitplaneLow[8 * j + k] + 2 * (byte)bitplaneHigh[8 * j + k];
+
+							mask /= 0x02;
+						}
+					}
+				}
 			}
 		}
 		else
@@ -95,6 +122,6 @@ byte ROM::Read(word addr)
 	{
 		// If in the ROM address range
 		addr -= 0x8000;
-		return m_memory[addr];
+		return m_pPRG[addr];
 	}
 }
