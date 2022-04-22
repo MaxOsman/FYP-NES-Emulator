@@ -5,7 +5,6 @@
 CPU::CPU(NES* parentNES)
 {
 	m_pNES = parentNES;
-	m_totalCycles = 0;
 
 	RESET();
 }
@@ -359,7 +358,6 @@ void CPU::Update()
 	}
 
 	--m_cycle;
-	++m_totalCycles;
 }
 
 byte CPU::AddrImmediate()

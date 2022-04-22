@@ -34,7 +34,9 @@ private:
 	SDL_Surface* m_pSurface;
 	TTF_Font* m_pFont;
 	std::ostringstream oss;
-	int m_outputCycles = 0;
 	int m_prevOutputCycles = 0;
 	float m_tempDeltaTime = 0;
+
+	unsigned long long int m_totalCycles;
+
 };

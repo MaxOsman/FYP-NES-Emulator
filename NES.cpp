@@ -34,17 +34,26 @@ bool NES::Update(SDL_Renderer* renderer, float deltaTime, SDL_Event e)
 {
 	m_timer += deltaTime;
 
+	if (m_pPPU->Update(m_totalCycles))
+	{
+		m_pCPU->Update();
+		//m_pDebug->OutputLine(m_pROM, m_pCPU);
+	}
+	if (m_pPPU->GetNMI())
+	{
+		m_pCPU->NMI();
+		m_pPPU->NMIOff();
+	}
+
 	//if (m_timer >= 1)
 	if (m_timer >= 0.01667f)
 	{
-		m_prevOutputCycles = m_outputCycles;
-		m_outputCycles = m_pCPU->m_totalCycles;
+		m_prevOutputCycles = m_totalCycles;
 		Render(renderer);
 		m_timer = 0;
 	}
 
-	m_pCPU->Update();
-	//m_pDebug->OutputLine(m_pROM, m_pCPU);
+	++m_totalCycles;
 
 	return false;
 }
@@ -57,7 +66,7 @@ void NES::Render(SDL_Renderer* renderer)
 	m_pPPU->Render(renderer);
 
 	oss.str(std::string());
-	oss << m_outputCycles - m_prevOutputCycles;
+	oss << m_totalCycles - m_prevOutputCycles;
 	DrawText(renderer, Vec2D( 4 * m_pPPU->GetScale(), 4 * m_pPPU->GetScale() ), (std::string("CPF: ") + oss.str()).c_str());
 
 	SDL_RenderPresent(renderer);
@@ -78,11 +87,6 @@ byte NES::Read(word addr)
 	else if (addr < 0x4018)
 	{
 		// APU + controller registers
-		if (addr == 0x4014)
-		{
-			// OAM DMA
-			return m_pPPU->Read(addr);
-		}
 	}
 	else
 	{
@@ -106,6 +110,11 @@ void NES::Write(byte value, word addr)
 	else if (addr < 0x4018)
 	{
 		// APU + controller registers
+		if (addr == 0x4014)
+		{
+			// OAM DMA
+			return m_pPPU->Write(value, addr);
+		}
 	}
 }
 

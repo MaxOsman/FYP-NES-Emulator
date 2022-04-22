@@ -126,7 +126,6 @@ public:
 
 	byte m_cycle;
 	bool m_hasCrossedBoundary;
-	unsigned long long int m_totalCycles;
 
 	CPU(NES* parentNES);
 	~CPU();

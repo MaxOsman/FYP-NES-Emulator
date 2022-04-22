@@ -12,17 +12,21 @@ class NES;
 class PPU
 {
 public:
-	PPU(SDL_Renderer* renderer, Tile* chr, NES* parentNES);
+	PPU(SDL_Renderer* renderer, byte* chr, NES* parentNES);
 	~PPU();
 
-	void DrawTile(int index, int palette, int scale, int x, int y);
+	void DrawTile(int index, int palette, int x, int y);
+	void DrawPixel(int palette, int colour, int x, int y);
 	void Render(SDL_Renderer* renderer);
-	void Update();
+	bool Update(unsigned long long int m_totalCycles);
 
 	int GetScale() { return m_scale; }
 	bool GetNMIEnabled() { return m_isNMIEnabled; }
+	bool GetNMI() { return m_isNMI; }
 
 	void SetMirroring(bool mirror) { m_isVerticalMirroring = mirror; }
+	void FlipCycle() { m_isEvenCycle = !m_isEvenCycle;}
+	void NMIOff() { m_isNMI = false; }
 
 	byte Read(word addr);
 	void Write(byte value, word addr);
@@ -41,12 +45,12 @@ private:
 											0xE4DCA8,	0xCCE3A9,	0xB9E8B8,	0xAEE8D0,	0xAFE5EA,	0xB6B6B6,	0x000000,	0x000000	};
 
 	// Temp numbers
-	byte m_palette[32] = {	0x0f, 0x00, 0x10, 0x20,		0x0f, 0x1c, 0x2c, 0x20,		0x0f, 0x00, 0x10, 0x20,		0x0f, 0x1c, 0x2c, 0x20,
-							0x0f, 0x16, 0x27, 0x20,		0x0f, 0x12, 0x21, 0x20,		0x0f, 0x09, 0x29, 0x20,		0x0f, 0x14, 0x25, 0x34		};
+	byte m_palette[32];
 
 	SDL_Texture* m_pFrameBuffer;
-	uint32_t* m_pixels = new uint32_t[SCREEN_WIDTH * SCREEN_HEIGHT];
-	Tile* m_pCHR = new Tile[512];
+	uint32_t* m_screenPixels = new uint32_t[SCREEN_WIDTH * SCREEN_HEIGHT];
+	//Tile* m_pCHR = new Tile[512];
+	byte* m_pCHR = new byte[0x2000];
 
 	int m_scale;
 
@@ -55,6 +59,13 @@ private:
 
 	byte m_Nametables[2][0x400];
 	byte m_OAM[256];
+
+	// DMA
+	bool m_isDMA;
+	bool m_isEvenCycle;
+	byte m_DMAPage;
+	byte m_DMAValue;
+	byte m_DMAAddr;
 
 	// Bit 0 to 1 - Base nametable
 	// Bit 2 - VRAM increment
@@ -81,24 +92,56 @@ private:
 
 	byte m_OAMADDR;		// $2003
 
-	byte m_OAMDATA;		// $2004
-
-	byte m_PPUSCROLL;	// $2005
-
-	word m_PPUADDR;		// $2006
-
-	byte m_PPUDATA;		// $2007
-
-	byte m_OAMDMA;		// $4014
-
 	bool m_isNMIEnabled;
 
 	// High byte then low byte
 	bool m_latch;
 
 	bool m_isVerticalMirroring;
-	int m_cycle;
+	// Pixel along each scanline
+	int m_pixel;
 	int m_scanline;
+	bool m_isNMI;
 
 	byte m_prevPPUDATARead;
+
+	// Scrolling
+	// 0yyyNNYYYYYXXXXX
+	// Bit 0 to 4 - coarse X
+	// Bit 5 to 9 - coarse Y
+	// Bit 10 to 11 - nametable
+	// Bit 12 to 14 - fine Y
+	word m_VRAMAddr;
+	word m_tempVRAMAddr;
+	int m_fineX;
+
+	word m_tilePatternShift[2];
+	byte m_tileAttrShift[2];
+	byte m_fetchNametable;
+	byte m_fetchAttr;
+	byte m_fetchPattern[2];
+
+	// Sprites
+	byte m_secondaryOAM[32];
+	byte m_spritePatternShift[2][8];
+	byte m_spriteAttrLatch[8];
+	byte m_spriteXCounter[8];
+	//byte m_spritesOnLine;
+
+	const byte Masks[4] =
+	{
+		0b11000000, 0b00110000, 0b00001100, 0b00000011
+	};
+	const byte Factors[4] =
+	{
+		64, 16, 4, 1
+	};
+	const int tables[8] =
+	{
+		0, 1, 0, 1, 0, 0, 1, 1
+	};
+	const word Powers[16] =
+	{
+		1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768
+	};
 };
