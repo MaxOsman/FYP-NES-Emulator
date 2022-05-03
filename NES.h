@@ -4,6 +4,7 @@
 #include "ROM.h"
 #include "Debug.h"
 #include "PPU.h"
+#include "Controller.h"
 #include <sstream>
 
 
@@ -13,7 +14,7 @@ public:
 	NES(SDL_Renderer* renderer);
 	~NES();
 
-	bool Update(SDL_Renderer* renderer, float deltaTime, SDL_Event e);
+	bool Update(SDL_Renderer* renderer, float deltaTime);
 	void Render(SDL_Renderer* renderer);
 
 	byte Read(word addr);
@@ -26,6 +27,7 @@ private:
 	RAM* m_pRAM;
 	ROM* m_pROM;
 	PPU* m_pPPU;
+	Controller* m_pCtrl;
 
 	Debug* m_pDebug;
 
@@ -39,4 +41,6 @@ private:
 
 	unsigned long long int m_totalCycles;
 
+	float m_prevTimer;
+	float m_storedTimer;
 };

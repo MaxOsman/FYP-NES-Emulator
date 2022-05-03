@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 
-		if (g_pNES->Update(g_renderer, (float)(newTime - g_oldTime) / 1000.0f, _event))
+		if (g_pNES->Update(g_renderer, (float)(newTime - g_oldTime) / 1000.0f))
 			quit = true;
 
 		g_oldTime = newTime;

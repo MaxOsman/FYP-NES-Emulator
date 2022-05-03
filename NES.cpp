@@ -16,6 +16,8 @@ NES::NES(SDL_Renderer* renderer)
 	m_pSurface = nullptr;
 	m_pTextTexture = nullptr;
 	m_pFont = TTF_OpenFont("arial.ttf", 20);
+
+	m_pCtrl = new Controller();
 }
 
 NES::~NES()
@@ -30,7 +32,7 @@ NES::~NES()
 	TTF_CloseFont(m_pFont);
 }
 
-bool NES::Update(SDL_Renderer* renderer, float deltaTime, SDL_Event e)
+bool NES::Update(SDL_Renderer* renderer, float deltaTime)
 {
 	m_timer += deltaTime;
 
@@ -43,15 +45,18 @@ bool NES::Update(SDL_Renderer* renderer, float deltaTime, SDL_Event e)
 	{
 		m_pCPU->NMI();
 		m_pPPU->NMIOff();
+		Render(renderer);
+		m_storedTimer = m_timer - m_prevTimer;
+		m_prevTimer = m_timer;
 	}
 
 	//if (m_timer >= 1)
-	if (m_timer >= 0.01667f)
+	/*if (m_timer >= 0.01667f)
 	{
 		m_prevOutputCycles = m_totalCycles;
 		Render(renderer);
 		m_timer = 0;
-	}
+	}*/
 
 	++m_totalCycles;
 
@@ -66,8 +71,8 @@ void NES::Render(SDL_Renderer* renderer)
 	m_pPPU->Render(renderer);
 
 	oss.str(std::string());
-	oss << m_totalCycles - m_prevOutputCycles;
-	DrawText(renderer, Vec2D( 4 * m_pPPU->GetScale(), 4 * m_pPPU->GetScale() ), (std::string("CPF: ") + oss.str()).c_str());
+	oss << 1 / m_storedTimer;
+	DrawText(renderer, Vec2D( 4 * m_pPPU->GetScale(), 4 * m_pPPU->GetScale() ), (std::string("FPS: ") + oss.str()).c_str());
 
 	SDL_RenderPresent(renderer);
 }
@@ -87,6 +92,11 @@ byte NES::Read(word addr)
 	else if (addr < 0x4018)
 	{
 		// APU + controller registers
+		if (addr == 0x4016 || addr == 0x4017)
+		{
+			// Controller poll
+			return m_pCtrl->Read(addr);
+		}
 	}
 	else
 	{
@@ -113,7 +123,12 @@ void NES::Write(byte value, word addr)
 		if (addr == 0x4014)
 		{
 			// OAM DMA
-			return m_pPPU->Write(value, addr);
+			m_pPPU->Write(value, addr);
+		}
+		else if (addr == 0x4016 || addr == 0x4017)
+		{
+			// Controller poll
+			m_pCtrl->Write(value, addr);
 		}
 	}
 }

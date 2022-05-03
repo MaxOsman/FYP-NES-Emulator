@@ -1,5 +1,5 @@
 #pragma once
-#include <assert.h>
+//#include <assert.h>
 #include "Types.h"
 
 #define NMI_VECTOR 0xfffa
@@ -160,7 +160,7 @@ public:
 	word CombineAddrBytes(byte high, byte low);
 
 	// Opcodes
-	void ADC(byte value, byte opcode);
+	void ADC(byte value);
 	void AND(byte value);
 	void ASL(byte value, byte opcode, word addr);
 	void BCC(byte value);
@@ -195,7 +195,6 @@ public:
 	void LDX(byte value);
 	void LDY(byte value);
 	void LSR(byte value, byte opcode, word addr);
-	void NOP();
 	void ORA(byte value);
 	void PHA();
 	void PHP();

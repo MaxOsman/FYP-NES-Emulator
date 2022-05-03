@@ -9,7 +9,7 @@ public:
 		for (unsigned int i = 0; i < 0x800; ++i)
 		{
 			// To do - initialise to random numbers
-			m_memory[i] = 0xff;
+			m_memory[i] = 0x00;
 		}
 	}
 

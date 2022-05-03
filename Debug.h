@@ -12,9 +12,9 @@ public:
 		"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"
 	};
 
-	const std::string AddrStrings[14] =
+	const std::string AddrStrings[13] =
 	{
-		"IMP", "ACC", "IMM", "ZER", "ZEX", "ZEY", "REL", "ABS", "ABX", "ABY", "IND", "INX", "INY", "NON"
+		"IMP", "ACC", "IMM", "ZER", "ZEX", "ZEY", "ABS", "ABX", "ABY", "IND", "INX", "INY", "NON"
 	};
 
 	const std::string OpStrings[57] =
@@ -54,7 +54,7 @@ public:
 	{
 		//printf("Cycle: %d \n", cpu->m_totalCycles);
 
-		//std::cout << HexString(cpu->m_programCounter) << ":        " << AddrStrings[cpu->OpcodeAddrTypes[rom->Read(cpu->m_programCounter)]] << "    " << OpStrings[cpu->OpcodeTypes[rom->Read(cpu->m_programCounter)]] << "    " << HexString(rom->Read(cpu->m_programCounter)) <<
-		//	"    |    " << "A = " << HexString(cpu->m_A) << ",  " << "X = " << HexString(cpu->m_X) << ",  " << "Y = " << HexString(cpu->m_Y) << "    |    " << "Cycle: " << cpu->m_totalCycles << std::endl;
+		std::cout << HexString(cpu->m_programCounter) << ":        " << AddrStrings[cpu->OpcodeAddrTypes[rom->Read(cpu->m_programCounter)]] << "    " << OpStrings[cpu->OpcodeTypes[rom->Read(cpu->m_programCounter)]] << "    " << HexString(rom->Read(cpu->m_programCounter)) <<
+			"    |    " << "A = " << HexString(cpu->m_A) << ",  " << "X = " << HexString(cpu->m_X) << ",  " << "Y = " << HexString(cpu->m_Y) << std::endl;
 	}
 };

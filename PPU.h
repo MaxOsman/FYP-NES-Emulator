@@ -15,7 +15,7 @@ public:
 	PPU(SDL_Renderer* renderer, byte* chr, NES* parentNES);
 	~PPU();
 
-	void DrawTile(int index, int palette, int x, int y);
+	void DrawTile(byte y, byte tile, byte attr, byte x);
 	void DrawPixel(int palette, int colour, int x, int y);
 	void Render(SDL_Renderer* renderer);
 	bool Update(unsigned long long int m_totalCycles);
@@ -49,7 +49,6 @@ private:
 
 	SDL_Texture* m_pFrameBuffer;
 	uint32_t* m_screenPixels = new uint32_t[SCREEN_WIDTH * SCREEN_HEIGHT];
-	//Tile* m_pCHR = new Tile[512];
 	byte* m_pCHR = new byte[0x2000];
 
 	int m_scale;
@@ -114,6 +113,7 @@ private:
 	word m_VRAMAddr;
 	word m_tempVRAMAddr;
 	int m_fineX;
+	word m_readAddr;
 
 	word m_tilePatternShift[2];
 	byte m_tileAttrShift[2];
@@ -122,11 +122,15 @@ private:
 	byte m_fetchPattern[2];
 
 	// Sprites
-	byte m_secondaryOAM[32];
+	/*byte m_secondaryOAM[32];
 	byte m_spritePatternShift[2][8];
 	byte m_spriteAttrLatch[8];
-	byte m_spriteXCounter[8];
-	//byte m_spritesOnLine;
+	byte m_spriteXCounter[8];*/
+
+	byte pixelColour;
+	byte pixelPalette;
+	bool pixelLow;
+	bool pixelHigh;
 
 	const byte Masks[4] =
 	{
@@ -136,7 +140,7 @@ private:
 	{
 		64, 16, 4, 1
 	};
-	const int tables[8] =
+	const int Tables[8] =
 	{
 		0, 1, 0, 1, 0, 0, 1, 1
 	};
