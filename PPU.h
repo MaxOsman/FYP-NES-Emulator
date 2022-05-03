@@ -16,7 +16,7 @@ public:
 	~PPU();
 
 	void DrawTile(byte y, byte tile, byte attr, byte x);
-	void DrawPixel(int palette, int colour, int x, int y);
+	void DrawPixel(int palette, int colour, byte x, byte y);
 	void Render(SDL_Renderer* renderer);
 	bool Update(unsigned long long int m_totalCycles);
 

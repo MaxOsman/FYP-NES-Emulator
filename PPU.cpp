@@ -86,10 +86,10 @@ void PPU::DrawTile(byte y, byte tile, byte attr, byte x)
 	}
 }
 
-void PPU::DrawPixel(int palette, int colour, int x, int y)
+void PPU::DrawPixel(int palette, int colour, byte x, byte y)
 {
 	// Prevent drawing outside array
-	if (x >= SCREEN_WIDTH || (y < 0))
+	if (y >= SCREEN_HEIGHT)
 		return;
 
 	m_screenPixels[x + (SCREEN_WIDTH * y)] = mFullNESPalette[m_palette[4 * palette + colour]];
@@ -147,22 +147,6 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 				// Palette in nametable
 				m_readAddr = 0x3c0 + ((m_VRAMAddr & 0b0000000000011111) / 4) + (m_VRAMAddr & 0b0000110000000000) + ((m_VRAMAddr & 0b0000001110000000) / 16);
 				m_fetchAttr = m_Nametables[Tables[index + (m_readAddr / 0x400)]][m_readAddr & 0x3ff];
-				/*if (addr < 0x400)
-				{
-					m_fetchAttr = m_Nametables[tables[index]][addr];
-				}
-				else if (addr < 0x800)
-				{
-					m_fetchAttr = m_Nametables[tables[index + 1]][addr & 0x3ff];
-				}
-				else if (addr < 0xc00)
-				{
-					m_fetchAttr = m_Nametables[tables[index + 2]][addr & 0x3ff];
-				}
-				else if (addr < 0x1000)
-				{
-					m_fetchAttr = m_Nametables[tables[index + 3]][addr & 0x3ff];
-				}*/
 
 				// Find tile in 2x2 set
 				m_fetchAttr /= Powers[( 4 * (int)(m_VRAMAddr && 0b0000000001000000) + 2 * (int)(m_VRAMAddr && 0b0000000000000010))];
@@ -256,7 +240,8 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 		}
 
 		// Background drawing
-		if (m_PPUMASK && 0b00001000)
+		// Only draw while on screen
+		if (m_PPUMASK && 0b00001000 && m_pixel <= 257)
 		{
 			// Colour, 0 to 3
 			pixelLow = (m_tilePatternShift[0] / Powers[15 - m_fineX]) & 0x1;
@@ -267,11 +252,6 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 			pixelLow = (m_tileAttrShift[0] / Powers[7 - m_fineX]) & 0x1;
 			pixelHigh = (m_tileAttrShift[1] / Powers[7 - m_fineX]) & 0x1;
 			pixelPalette = (byte)pixelHigh * 0x2 + (byte)pixelLow;
-
-			if (pixelColour)
-			{
-				pixelColour = pixelColour;
-			}
 
 			DrawPixel(pixelPalette, pixelColour, m_pixel-2, m_scanline-1);
 		}
@@ -285,7 +265,7 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 
 		for (unsigned int i = 0; i < 64; ++i)
 		{
-			DrawTile(m_OAM[4 * i]-1, m_OAM[4 * i + 1], m_OAM[4 * i + 2], m_OAM[4 * i + 3]);
+			DrawTile(m_OAM[4 * i] - 1, m_OAM[4 * i + 1], m_OAM[4 * i + 2], m_OAM[4 * i + 3]);
 		}
 	}
 
@@ -356,7 +336,6 @@ byte PPU::Read(word addr)
 	switch (addr)
 	{
 	case 0x2:
-		return 0xff;
 		// PPU STATUS
 		// Only top 3 bits used, may be an accuracy issue
 		temp = m_PPUSTATUS & 0b11100000;
@@ -376,7 +355,7 @@ byte PPU::Read(word addr)
 	case 0x7:
 		// PPU DATA
 		// Delay read by 1 frame
-		byte temp = m_prevPPUDATARead;
+		temp = m_prevPPUDATARead;
 		m_prevPPUDATARead = ReadFromPPU(m_VRAMAddr);
 		if (m_VRAMAddr >= 0x3f00)
 		{
@@ -409,8 +388,10 @@ void PPU::Write(byte value, word addr)
 		{
 		case 0x0:
 			// PPU CTRL
-			mask = ~((m_PPUCTRL & 0x3) * 0b10000000000);
-			m_tempVRAMAddr &= mask;
+			//mask = ~((m_PPUCTRL & 0x3) * 0b10000000000);
+			//m_tempVRAMAddr &= mask;
+			m_tempVRAMAddr &= 0b0111001111111111;
+			m_tempVRAMAddr |= ((value & 0b11) * 0b1000000000);
 			m_PPUCTRL = value;
 			break;
 
