@@ -35,7 +35,7 @@ public:
 
 private:
 	// Drawing
-	const uint32_t mFullNESPalette[64] = {	0x656565,	0x002D69,	0x131F7F,	0x3C137C,	0x600B62,	0x730A37,	0x710F07,	0x5A1A00,
+	const uint32_t m_FullNESPalette[64] = {	0x656565,	0x002D69,	0x131F7F,	0x3C137C,	0x600B62,	0x730A37,	0x710F07,	0x5A1A00,
 											0x342800,	0x0B3400,	0x003C00,	0x003D10,	0x003840,	0x000000,	0x000000,	0x000000,
 											0xAEAEAE,	0x0F63B3,	0x4051D0,	0x7841CC,	0xA736A9,	0xC03470,	0xBD3C30,	0x9F4A00,
 											0x6D5C00,	0x366D00,	0x077704,	0x00793D,	0x00727D,	0x000000,	0x000000,	0x000000,
@@ -50,7 +50,6 @@ private:
 	SDL_Texture* m_pFrameBuffer;
 	uint32_t* m_screenPixels = new uint32_t[SCREEN_WIDTH * SCREEN_HEIGHT];
 	byte* m_pCHR = new byte[0x2000];
-
 	int m_scale;
 
 	// Emulation
@@ -97,6 +96,7 @@ private:
 	bool m_latch;
 
 	bool m_isVerticalMirroring;
+	int m_tableIndex;
 	// Pixel along each scanline
 	int m_pixel;
 	int m_scanline;
@@ -120,12 +120,6 @@ private:
 	byte m_fetchNametable;
 	byte m_fetchAttr;
 	byte m_fetchPattern[2];
-
-	// Sprites
-	/*byte m_secondaryOAM[32];
-	byte m_spritePatternShift[2][8];
-	byte m_spriteAttrLatch[8];
-	byte m_spriteXCounter[8];*/
 
 	byte pixelColour;
 	byte pixelPalette;

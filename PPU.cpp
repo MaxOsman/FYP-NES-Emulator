@@ -29,6 +29,7 @@ PPU::PPU(SDL_Renderer* renderer, byte* chr, NES* parentNES)
 	m_DMAValue = 0x0;
 	m_DMAAddr = 0x0;
 	m_readAddr = 0x0;
+	m_tableIndex = m_isVerticalMirroring ? 0 : 4;
 
 	for (size_t i = 0; i < 0x400; ++i)
 	{
@@ -73,7 +74,7 @@ void PPU::DrawTile(byte y, byte tile, byte attr, byte x)
 					colour = (bool)(lowPlane & mask) + 2 * (bool)(highPlane & mask);
 					if (colour)
 					{
-						m_screenPixels[x + (SCREEN_WIDTH * y)] = mFullNESPalette[m_palette[4 * (attr & 0b11) + colour + 16]];
+						m_screenPixels[x + (SCREEN_WIDTH * y)] = m_FullNESPalette[m_palette[4 * (attr & 0b11) + colour + 16]];
 						m_PPUSTATUS |= 0x40;
 					}
 					mask /= 0x2;
@@ -88,11 +89,7 @@ void PPU::DrawTile(byte y, byte tile, byte attr, byte x)
 
 void PPU::DrawPixel(int palette, int colour, byte x, byte y)
 {
-	// Prevent drawing outside array
-	if (y >= SCREEN_HEIGHT)
-		return;
-
-	m_screenPixels[x + (SCREEN_WIDTH * y)] = mFullNESPalette[m_palette[4 * palette + colour]];
+	m_screenPixels[x + (SCREEN_WIDTH * y)] = m_FullNESPalette[m_palette[4 * palette + colour]];
 }
 
 void PPU::Render(SDL_Renderer* renderer)
@@ -129,7 +126,6 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 				m_tileAttrShift[1] += (m_fetchAttr & 0b10);
 			}
 
-			const int index = m_isVerticalMirroring ? 0 : 4;
 			switch ((m_pixel - 1) % 8)
 			{
 			case 0:
@@ -140,13 +136,13 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 
 				// Tile in nametable
 				m_readAddr = m_VRAMAddr & 0x0fff;
-				m_fetchNametable = m_Nametables[Tables[index + (m_readAddr / 0x400)]][m_readAddr & 0x3ff];
+				m_fetchNametable = m_Nametables[Tables[m_tableIndex + (m_readAddr / 0x400)]][m_readAddr & 0x3ff];
 				break;
 
 			case 2:
 				// Palette in nametable
-				m_readAddr = 0x3c0 + ((m_VRAMAddr & 0b0000000000011111) / 4) + (m_VRAMAddr & 0b0000110000000000) + ((m_VRAMAddr & 0b0000001110000000) / 16);
-				m_fetchAttr = m_Nametables[Tables[index + (m_readAddr / 0x400)]][m_readAddr & 0x3ff];
+				m_readAddr = 0x3c0 + ((m_VRAMAddr & 0b0000000000011111) / 4) + ((m_VRAMAddr & 0b0000001110000000) / 16) + (m_VRAMAddr & 0b0000110000000000);
+				m_fetchAttr = m_Nametables[Tables[m_tableIndex + (m_readAddr / 0x400)]][m_readAddr & 0x3ff];
 
 				// Find tile in 2x2 set
 				m_fetchAttr /= Powers[( 4 * (int)(m_VRAMAddr && 0b0000000001000000) + 2 * (int)(m_VRAMAddr && 0b0000000000000010))];
@@ -198,7 +194,6 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 						if ((m_VRAMAddr & 0b0000001111100000) == 0b0000001110100000)
 						{
 							// If coarse Y = 29
-							// TODO - add case for = 31?
 							m_VRAMAddr &= 0b0111110000011111;
 							m_VRAMAddr ^= 0b0000100000000000;
 						}
@@ -216,7 +211,7 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 				m_tilePatternShift[1] |= m_fetchPattern[1];
 				if (m_PPUMASK & 0b00011000)
 				{
-					// Set addr to temp addr
+					// Set addr to temp addr - X
 					m_VRAMAddr &= 0b0111101111100000;
 					m_VRAMAddr += (m_tempVRAMAddr & 0b0000010000011111);
 				}
@@ -227,7 +222,7 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 			// End of VBlank
 			if (m_PPUMASK & 0b00011000)
 			{
-				// Set addr to temp addr
+				// Set addr to temp addr - Y
 				m_VRAMAddr &= 0b0000010000011111;
 				m_VRAMAddr += (m_tempVRAMAddr & 0b0111101111100000);
 			}
@@ -240,8 +235,7 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 		}
 
 		// Background drawing
-		// Only draw while on screen
-		if (m_PPUMASK && 0b00001000 && m_pixel <= 257)
+		if (m_PPUMASK && 0b00001000 && m_pixel >= 2 && m_pixel <= 257)
 		{
 			// Colour, 0 to 3
 			pixelLow = (m_tilePatternShift[0] / Powers[15 - m_fineX]) & 0x1;
@@ -256,16 +250,18 @@ bool PPU::Update(unsigned long long int m_totalCycles)
 			DrawPixel(pixelPalette, pixelColour, m_pixel-2, m_scanline-1);
 		}
 	}
+
+	// End of frame
+	// VBlank bit set
+	// Sprite drawing
 	else if (m_pixel == 1 && m_scanline == 242)
 	{
-		// End of frame
-		// VBlank bit set
 		m_PPUSTATUS |= 0x80;
 		m_isNMI = m_PPUCTRL & 0x80 ? true : m_isNMI;
 
 		for (unsigned int i = 0; i < 64; ++i)
 		{
-			DrawTile(m_OAM[4 * i] - 1, m_OAM[4 * i + 1], m_OAM[4 * i + 2], m_OAM[4 * i + 3]);
+			DrawTile(m_OAM[4 * i]-1, m_OAM[4 * i + 1], m_OAM[4 * i + 2], m_OAM[4 * i + 3]);
 		}
 	}
 
@@ -336,6 +332,7 @@ byte PPU::Read(word addr)
 	switch (addr)
 	{
 	case 0x2:
+		return 0xff;
 		// PPU STATUS
 		// Only top 3 bits used, may be an accuracy issue
 		temp = m_PPUSTATUS & 0b11100000;
@@ -355,7 +352,7 @@ byte PPU::Read(word addr)
 	case 0x7:
 		// PPU DATA
 		// Delay read by 1 frame
-		temp = m_prevPPUDATARead;
+		byte temp = m_prevPPUDATARead;
 		m_prevPPUDATARead = ReadFromPPU(m_VRAMAddr);
 		if (m_VRAMAddr >= 0x3f00)
 		{
@@ -388,10 +385,8 @@ void PPU::Write(byte value, word addr)
 		{
 		case 0x0:
 			// PPU CTRL
-			//mask = ~((m_PPUCTRL & 0x3) * 0b10000000000);
-			//m_tempVRAMAddr &= mask;
 			m_tempVRAMAddr &= 0b0111001111111111;
-			m_tempVRAMAddr |= ((value & 0b11) * 0b1000000000);
+			m_tempVRAMAddr |= (m_PPUCTRL & 0b11);
 			m_PPUCTRL = value;
 			break;
 
@@ -466,16 +461,8 @@ byte PPU::ReadFromPPU(word addr)
 	else if (addr < 0x3f00)
 	{
 		// Nametables
-		if (addr >= 0x3000)
-		{
-			// Mirrors
-			addr -= 0x1000;
-		}
-
-		const int index = m_isVerticalMirroring ? 0 : 4;
-		addr -= 0x2000;
-
-		return m_Nametables[Tables[index + (addr / 0x400)]][addr & 0x3ff];
+		addr &= 0xfff;
+		return m_Nametables[Tables[m_tableIndex + (addr / 0x400)]][addr & 0x3ff];
 	}
 	else if (addr < 0x4000)
 	{

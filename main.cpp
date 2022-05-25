@@ -1,5 +1,7 @@
 #include "NES.h"
 
+
+// SDL2 setup based on SDL Mario project
 SDL_Window* g_window = nullptr;
 SDL_Renderer* g_renderer = nullptr;
 NES* g_pNES = nullptr;
@@ -15,8 +17,7 @@ int main(int argc, char* argv[])
 	g_pNES = new NES(g_renderer);
 	g_oldTime = SDL_GetTicks();
 
-	bool quit = false;
-	while (!quit)
+	while (true)
 	{
 		Uint32 newTime = SDL_GetTicks();
 		SDL_Event _event;
@@ -30,8 +31,7 @@ int main(int argc, char* argv[])
 			break;
 		}
 
-		if (g_pNES->Update(g_renderer, (float)(newTime - g_oldTime) / 1000.0f))
-			quit = true;
+		g_pNES->Update(g_renderer, (float)(newTime - g_oldTime) / 1000.0f);
 
 		g_oldTime = newTime;
 	}

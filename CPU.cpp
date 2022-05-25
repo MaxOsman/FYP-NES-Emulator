@@ -523,6 +523,7 @@ word CPU::AddrIndirectY()
 	return valueAddr;
 }
 
+
 void CPU::Branch(byte value)
 {
 	word previousCounter = m_programCounter;
@@ -586,6 +587,7 @@ word CPU::CombineAddrBytes(byte high, byte low)
 {
 	return ( (word)high * 0x100 + (word)low );
 }
+
 
 // Overflow logic from stackoverflow.com/questions/16845912/determining-carry-and-overflow-flag-in-6502-emulation-in-java
 void CPU::ADC(byte value)

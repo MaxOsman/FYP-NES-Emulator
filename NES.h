@@ -14,7 +14,7 @@ public:
 	NES(SDL_Renderer* renderer);
 	~NES();
 
-	bool Update(SDL_Renderer* renderer, float deltaTime);
+	void Update(SDL_Renderer* renderer, float deltaTime);
 	void Render(SDL_Renderer* renderer);
 
 	byte Read(word addr);

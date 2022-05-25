@@ -32,7 +32,7 @@ NES::~NES()
 	TTF_CloseFont(m_pFont);
 }
 
-bool NES::Update(SDL_Renderer* renderer, float deltaTime)
+void NES::Update(SDL_Renderer* renderer, float deltaTime)
 {
 	m_timer += deltaTime;
 
@@ -50,17 +50,7 @@ bool NES::Update(SDL_Renderer* renderer, float deltaTime)
 		m_prevTimer = m_timer;
 	}
 
-	//if (m_timer >= 1)
-	/*if (m_timer >= 0.01667f)
-	{
-		m_prevOutputCycles = m_totalCycles;
-		Render(renderer);
-		m_timer = 0;
-	}*/
-
 	++m_totalCycles;
-
-	return false;
 }
 
 void NES::Render(SDL_Renderer* renderer)
@@ -71,7 +61,7 @@ void NES::Render(SDL_Renderer* renderer)
 	m_pPPU->Render(renderer);
 
 	oss.str(std::string());
-	oss << (int)(1 / m_storedTimer);
+	oss << 1 / m_storedTimer;
 	DrawText(renderer, Vec2D( 4 * m_pPPU->GetScale(), 4 * m_pPPU->GetScale() ), (std::string("FPS: ") + oss.str()).c_str());
 
 	SDL_RenderPresent(renderer);

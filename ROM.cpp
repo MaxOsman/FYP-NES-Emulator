@@ -66,41 +66,21 @@ void ROM::LoadROM()
 				inFile.read((char*)&romCHR[0], 0x2000);
 				inFile.close();
 
-				// Load PRG ROM
+				// PRG ROM
 				for (unsigned int i = 0; i < prgSize; ++i)
 				{
 					m_pPRG[i] = romPRG[i];
 				}
 				if (romHeader[4] == 0x1)
 				{
-					// If PRG does not take up all $8000 bytes, then it is mirrored, e.g. in Donkey Kong it has $4000 bytes of ROM, but two instances of it
+					// If PRG does not take up all $8000 bytes, then it is mirrored, it has $4000 bytes of ROM, but two instances of it
 					for (unsigned int i = 0; i < prgSize; ++i)
 					{
 						m_pPRG[0x4000 + i] = romPRG[i];
 					}
 				}
 
-				// Load CHR ROM
-				//bool bitplaneLow[64];
-				//bool bitplaneHigh[64];
-				//for (unsigned int i = 0; i < 512; ++i)
-				//{
-				//	// Each byte on a line, 1st half then last half
-				//	for (unsigned int j = 0; j < 8; ++j)
-				//	{
-				//		// Each bit in the byte
-				//		byte mask = 0b10000000;
-				//		for (unsigned int k = 0; k < 8; ++k)
-				//		{
-				//			bitplaneLow[8 * j + k] = romCHR[16 * i + j] & mask;
-				//			bitplaneHigh[8 * j + k] = romCHR[16 * i + j + 8] & mask;
-				//			m_pCHR[i].colours[8 * j + k] = (byte)bitplaneLow[8 * j + k] + 2 * (byte)bitplaneHigh[8 * j + k];
-
-				//			mask /= 0x02;
-				//		}
-				//	}
-				//}
-
+				// CHR ROM
 				for (unsigned int i = 0; i < 0x2000; ++i)
 				{
 					m_pCHR[i] = romCHR[i];
